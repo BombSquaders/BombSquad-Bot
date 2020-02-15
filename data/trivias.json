@@ -1,0 +1,57 @@
+{
+  "0": {
+    "question": "Who made the game BombSquad?",
+    "options": ["Mrmaxmeier", "The Mikirog", "Eric Froemling", "Froshlee"],
+    "answers": ["3", "Eric Froemling"]
+  },
+  "1": {
+    "question": "What is the name of health powerup in original BombSquad game in `How to play` window by default?",
+    "options": ["health", "survive", "Med-Pack", "Curse-Cancel"],
+    "answers": ["3", "Med-Pack"]
+  },
+  "2": {
+    "question": "What is the name of health powerup in original BombSquad game in `bsPowerup.py` script by default?",
+    "options": ["health", "survive", "Med-Pack", "Curse-Cancel"],
+    "answers": ["1", "health"]
+  },
+  "3": {
+    "question": "What is the name of the powerup in BombSquad game which gives you a BuddyBunny?",
+    "options": ["BuddyBunny", "bunny", "buddy-bunny", "buddy"],
+    "answers": ["2", "bunny"]
+  },
+  "4": {
+    "question": "Which mod script adds `Super Smash` game in BombSquad?",
+    "options": ["superSmash.py", "SnoBallz.py", "smash.py", "snake.py"],
+    "answers": ["3", "smash.py"]
+  },
+  "5": {
+    "question": "Which powerup lets you whip out three bombs in a row in original BombSquad by default?",
+    "options": ["Triple-Bombs", "Energy-Shield", "Trigger-Bombs", "tripleBombs"],
+    "answers": ["1", "Triple-Bombs", "4", "tripleBombs"]
+  },
+  "6": {
+    "question": "Which of the following is not one of the control buttons in original BombSquad game by default?",
+    "options": ["Punch", "Bomb", "Jump", "Fly"],
+    "answers": ["4", "Fly"]
+  },
+  "7": {
+    "question": "A BombSquad game's dedicated server can be configured to allow how many players?",
+    "options": ["6", "9", "50", "unlimited"],
+    "answers": ["4", "unlimited"]
+  },
+  "8": {
+    "question": "Which of the following windows is used for playing online?",
+    "options": ["Gather", "Play", "Online", "Watch"],
+    "answers": ["1", "Gather"]
+  },
+  "9": {
+    "question": "Which of the following is not a window of the original BombSquad game by default?",
+    "options": ["Gather", "Play", "Online", "Watch"],
+    "answers": ["3", "Online"]
+  },
+  "10": {
+    "question": "Which map is shown on the main menu in original BombSquad game by default?",
+    "options": ["The Pad", "Football Stadium", "Hockey Stadium", "Rampage"],
+    "answers": ["1", "The Pad"]
+  }
+}

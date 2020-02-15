@@ -1,5 +1,12 @@
+# Some unwanted editor folders and different branches
+.idea
+.vscode
+webDashboard*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
+cogs/__pycache__/
+ext/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -127,3 +134,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
