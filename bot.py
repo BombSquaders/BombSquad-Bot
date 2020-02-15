@@ -210,9 +210,9 @@ async def on_message(message):
     # Check if the bot's prefix is being asked
     if bot.user.mentioned_in(message) and not message.mention_everyone:
         if 'prefix' in message.content.lower():
-            await channel.send(f'The bot\'s prefix in this server is `{prefix(bot, message)}`')
+            await channel.send(f'The bot\'s prefix in this server is `{await prefix(bot, message)}`')
         elif 'help' in message.content.lower():
-            await channel.send(f'For getting help use command `{prefix(bot, message)}help`')
+            await channel.send(f'For getting help use command `{await prefix(bot, message)}help`')
         else:
             await message.add_reaction('👀')  # :eyes:
             await message.add_reaction("❓")  # question mark
@@ -289,7 +289,8 @@ def format_command_help(ctx, cmd, em):
     if hasattr(cmd, 'invoke_without_command') and cmd.invoke_without_command:
         c = f'`Usage: {ctx.prefix + cmd.name} {cmd.signature}`'
     else:
-        c = f'`{ctx.prefix + cmd.name} {cmd.signature}` {cmd.short_doc}'
+        p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
+        c = f'`{ctx.prefix + p + cmd.name} {cmd.signature}` {cmd.short_doc}'
     em.add_field(
         name=cmd.name,
         value=c,
