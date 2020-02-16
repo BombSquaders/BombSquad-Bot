@@ -30,6 +30,14 @@ Make sure of following points before trying to run the bot:-
   1. You have python version >= 3.8.0
   2. You have all the requirements with correct version from the `requirements.txt`
   3. You must have `ffmpeg` installed for using audio cog
+  4. You have correctly set up the environment variables required by this bot. Following are the environment variables required:
+      - `bot_discord_token` this should be the token of the bot on discord's developer page
+      - `bot_dbl_token` if your bot is listed in [DBL](https://top.gg) set this environment variable to bot's DBL token,
+      or you may leave it
+      - `mysql_user` the username used by the code to connect to MySQL database
+      - `mysql_password` the password used by the code for establishment of the connection
+      - `mysql_database` the database which has all data and which will be used by the code,
+      for security and other reason it is recommended to use the same username and database name
 
 And after you have done all changes and these points are ensured you can run the bot simply by opening a terminal in the root
  directory and type in the terminal `python bot.py` or `<python version/path> bot.py` based on your OS settings.
