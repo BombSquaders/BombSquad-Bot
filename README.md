@@ -1,8 +1,9 @@
-# BombSquad Bot repository
+# BombSquad Bot source code
 This is the Github repository to share the source code of my BombSquad bot of discord,
  using this source code anyone can create and host their own bot with some tweaks and customization.
  The README files in this repository will provide you with all the information about the source code,
- and using the source code in different ways.
+ and using the source code in different ways. For information about using the BombSquad bot and it's
+ website go to [this repository's wiki pages](https://github.com/I-Am-The-Great/BombSquad-Bot/wiki).
 
 ## Py code evaluation
 In the `bot.py` python script you see a thread named `RunInput` it is a non-blocking synchronous thread
