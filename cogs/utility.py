@@ -268,7 +268,7 @@ class Utility(commands.Cog):
 
     @commands.command(aliases=["fan-art", "fan_art"])
     @commands.cooldown(1, 15, BucketType.user)
-    async def fanart(self, ctx, url=None):
+    async def fanart(self, ctx, *urls):
         """Submit an artwork made by you for this bot"""
         ch = self.bot.get_channel(612605556615806986)  # Fan-art channel
 
@@ -279,16 +279,16 @@ class Utility(commands.Cog):
         now = datetime.datetime.utcnow()
         em.set_footer(text=f"Artwork submitted on {now:%A, %B %d, %Y} at {now:%I:%M:%S %p} UTC.")
 
-        # Get the media attachments of the accepted file types
+        # Get the media attachments of the accepted file types from the urls and attachments
         attachments: [discord.File] = []
         ex = [".jpg", ".png", ".gif", ".jpeg"]
-        if url is not None:
+        for url in urls:
             if not str(url).endswith(ex):
-                await ctx.send("The given url does not point to a file with valid extension.\n"
+                await ctx.send(f"The given url {str(url)} does not point to a file with valid extension.\n"
                                f"The allowed extensions are: {str(ex)}")
             else:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as resp:
+                    async with session.get(str(url)) as resp:
                         content = io.BytesIO(await resp.content.read())
                         attachments.append(discord.File(content))
         for a in ctx.message.attachments:
@@ -304,6 +304,7 @@ class Utility(commands.Cog):
             for a in attachments:
                 await utils.mysql_set(self.bot, id=ctx.author.name, arg1="fan_arts", arg2=a.url,
                                       arg3=now.strftime('%Y-%m-%d %H:%M:%S'))
+            await ctx.send("The accepted extensions artworks are successfully sent to the support server.")
         else:
             await ctx.send("You did not give any valid media file url or attached a valid media file to your message.\n"
                            f"The allowed extensions are: {str(ex)}")
