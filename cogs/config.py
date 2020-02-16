@@ -18,8 +18,12 @@ class Config(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def prefix(self, ctx, *, pre):
         """Set a custom prefix for the guild."""
+
+        # Get and set prefix
         result = await self.bot.config.get_prefix(str(ctx.guild.id))
         await self.bot.config.update(str(ctx.guild.id), "prefix", str(pre))
+
+        # Send confirmation
         await ctx.send(
             f'The guild prefix has been set to `{pre}` from `{result}`.\n'
             f'Use `{pre}prefix <prefix>` to change it again.')
@@ -27,6 +31,8 @@ class Config(commands.Cog):
     @commands.group(invoke_without_command=True, aliases=["bs", "bs_server", "bs_stats"])
     async def bs_server_stats(self, ctx):
         """Use it if you want to set a BS server to get stats from or if you want to retrieve stats from current set."""
+
+        # Command group used without sub-command argument
         em = discord.Embed(title="Using the server stats function.",
                            description=f"For using command to show your server's stats, you must be using the server "
                                        f"files from [This Github repository]({self.bs_server_files}).")
@@ -49,33 +55,35 @@ class Config(commands.Cog):
         def msg(m):
             return m.author == ctx.author and m.channel == ctx.message.channel
 
+        # Ask for and get the stats json file link
         await ctx.send(
             "Ohk, now send the complete link of the .json file which stores stats of the BS server in 60 seconds."
             "The link must include auth details if there is any!")
-
         try:
             link = await self.bot.wait_for('message', check=msg, timeout=60.0)
         except asyncio.TimeoutError:
             return await ctx.send("You failed to give a valid message in time, think again and then restart.")
 
+        # If the link is a valid complete link
         if not (str(link.content).startswith("http") and str(link.content).__contains__("://")):
             return await ctx.send("You did not gave a link correctly, now restart.")
 
+        # Get the name of the BombSquad server of the stats file
         await ctx.send("Ohk, now send the name of the BombSquad server.")
-
         try:
             name = await self.bot.wait_for('message', check=msg, timeout=60.0)
         except asyncio.TimeoutError:
             return await ctx.send("You failed to give a valid message in time, think again and then restart.")
 
+        # Get the ID to save this entry to
         await ctx.send("Now send me a natural number that you want to be the id of this stats entry."
                        "(If you send an already used id it will be overridden)")
-
         try:
             sid = await self.bot.wait_for('message', check=msg, timeout=60.0)
         except asyncio.TimeoutError:
             return await ctx.send("You failed to give a valid message in time, think again and then restart.")
 
+        # The json data to save
         data = {
             str(sid.content): {
                 "name": str(name.content),
@@ -83,6 +91,7 @@ class Config(commands.Cog):
             }
         }
 
+        # Save it and send confirmation
         await self.bot.config.update(ctx.guild.id, "BSStats", str(json.dumps(data)))
         await ctx.send(f"This stats file entry has been successfully set, it's ID is {str(sid.content)}."
                        f"To get data from it use `{ctx.prefix}bs_stats get {str(sid.content)}")
@@ -90,16 +99,23 @@ class Config(commands.Cog):
     @bs_server_stats.command()
     async def get(self, ctx, set_id: str):
         """Use this command to get the stats of the BombSquad server set for this guild by id."""
+
+        # Retrieve config data from database
         data = await self.bot.config.get_bstats(ctx.guild.id)
         name = data[set_id]["name"]
         link = data[set_id]["link"]
+
+        # Get the stats data from url
         async with aiohttp.ClientSession() as session:
             async with session.get(link) as resp:
                 json_data = json.loads(await resp.read())
+
+        # Initiating variables
         pages = []
         rank = 0
         try:
             for i in range(len(json_data)):
+                # For each player's entry in the stats file add a new embed page
                 rank += 1
                 img_url = json_data[str(rank)]["icon_url"]
                 p_name = json_data[str(rank)]["name"]
@@ -117,6 +133,8 @@ class Config(commands.Cog):
                 for field in json_data[str(rank)]:
                     em.add_field(name=str(field), value=str(json_data[str(rank)][field]))
                 pages.append(em)
+
+        # If there is any error then abort and send the instructions, must you the set server files
         except KeyError:
             em = discord.Embed(title="The stats file has KeyError.",
                                description="The entry of the stats file is missing the `name` or the `icon_url` field.")
@@ -135,6 +153,8 @@ class Config(commands.Cog):
                                f"({self.bs_server_files})")
             em.set_footer(text=f"Contact <@{self.bot.creator.discord}> to resolve if you already use the server files.")
             return await ctx.send(embed=em)
+
+        # Star the pagination session for showing all the stats pages to the command user
         p_session = PaginatorSession(ctx,
                                      footer=f'Use the reactions of this message below to navigate between the data of'
                                             f' different rank holders.',
@@ -144,6 +164,8 @@ class Config(commands.Cog):
     @bs_server_stats.command()
     async def search(self, ctx, set_id: str, *, search: str):
         """Use this command to search a player in the stats of the BombSquad server set for this guild by id."""
+
+        # Same process to get the data from config and url
         data = await self.bot.config.get_bstats(ctx.guild.id)
         name = data[set_id]["name"]
         link = data[set_id]["link"]
@@ -152,17 +174,22 @@ class Config(commands.Cog):
                 json_data = json.loads(await resp.read())
         pages = []
         rank = 0
+
         try:
             for i in range(len(json_data)):
+                # Loop through each player stats input in the file
                 rank += 1
                 img_url = json_data[str(rank)]["icon_url"]
                 p_name = json_data[str(rank)]["name"]
                 if str(p_name).lower().__contains__(search.lower()):
+                    # But only add those which match the name
                     em = discord.Embed(title=f"Player stats data for the {name} BombSquad server .",
                                        description=f"Search results for `{search}` in the players stats.")
                     em.set_author(name=str(p_name), icon_url=str(img_url))
                     em.set_thumbnail(url=img_url)
                     pages.append(em)
+
+        # Again notify about any errors to the stats server owner
         except KeyError:
             em = discord.Embed(title="The stats file has KeyError.",
                                description="The entry of the stats file is missing the `name` or the `icon_url` field.")
@@ -191,12 +218,16 @@ class Config(commands.Cog):
     @commands.has_permissions(manage_guild=True)
     async def delete(self, ctx, sid):
         """Use this command to get the stats of the BombSquad server set for this guild by id."""
+
+        # Get the current config, remove the requested item if exists
         data = await self.bot.config.get_bstats(ctx.guild.id)
         if data.get(str(sid), None) is not None:
             data.pop(str(sid))
         else:
             return await ctx.send("Invalid ID no server stats set to retrieve from the given ID."
                                   f"Use `{ctx.prefix}bs_stats list` command to get a list of set bs server stats.")
+
+        # Save it and send confirmation
         await self.bot.config.update(ctx.guild.id, "BSStats", data)
         await ctx.send(f"Ohk, successfully removed the BStats of ID {str(sid)} from this guild.")
 

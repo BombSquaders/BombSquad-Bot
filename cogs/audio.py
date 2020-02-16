@@ -13,12 +13,12 @@ class Audio(commands.Cog):
 
     async def audioStop(self, ctx):
         """To leave voice channel after done"""
-        i = 0
+        i = 0  # Initially set this variable to 0
         while i < 5:
-            await asyncio.sleep(30)
+            await asyncio.sleep(30)  # Wait for 30 seconds
             vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-            if vc is not None:
-                if not vc.is_playing():
+            if vc is not None:  # If the bot is connected to voice in the server
+                if not vc.is_playing():  # if it is not playing then we need to disconnect and break the loop
                     try:
                         await vc.disconnect()
                         await ctx.send("Left the voice channel due to half minute of inactivity.")
@@ -26,34 +26,40 @@ class Audio(commands.Cog):
                     except:
                         traceback.print_exc()
                         break
-            else:
+            else:  # If the bot is not connected to voice break
                 break
             i += 1
 
     @commands.command()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
         """To make the bot join a voice channel."""
-        if not channel and not ctx.author.voice:
+        if not channel and not ctx.author.voice:  # If no channel given and the author is also not in any channel return
             return await ctx.send('You are neither connected to a voice channel nor specified a channel to join.')
-        destination = channel or ctx.author.voice.channel
-        try:
+        destination = channel or ctx.author.voice.channel  # Find the destination voice channel
+
+        try:  # Connect to destination
             await destination.connect()
-        except discord.ClientException:
-            try:
+        except discord.ClientException:  # If some exception occurs
+            try:  # Get the bot's current voice client in the server
                 voice_client: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-            except discord.NotFound:
-                return
-            await voice_client.disconnect()
+            except discord.NotFound:  # If not found then log the exception and return
+                return traceback.print_exc()
+            # Send a message and return if the voice channel has more members and the command user doesn't have perms
+            if len(voice_client.channel.members) > 1 and not ctx.author.guild_permissions.move_members:
+                return await ctx.send("I am currently in a voice channel with at least one member and you don't have "
+                                      "the permission to move members.")
+            await voice_client.disconnect()  # Disconnect from current voice client
             try:
-                await destination.connect()
+                await destination.connect()  # Try to connect to destination
             except discord.Forbidden:
-                await ctx.send("I do not have access to that voice channel.")
+                await ctx.send("I do not have access to that voice channel.")  # The bot do not have the permissions
         except discord.Forbidden:
-            await ctx.send("I do not have access to that voice channel.")
+            await ctx.send("I do not have access to that voice channel.")  # The bot do not have the permissions
 
     @commands.group(invoke_without_command=True)
     async def play(self, ctx):
         """To play either a BombSquad audio or remix."""
+        # Command used without the sub-command argument
         await ctx.send(f"Usage: "
                        f"either `{ctx.prefix}play remix <number>`"
                        f"or `{ctx.prefix}play sound <search terms>`")
@@ -61,17 +67,13 @@ class Audio(commands.Cog):
     @play.command()
     async def remix(self, ctx, music: int):
         """To play a BombSquad remix."""
-        try:
-            voice_client: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-        except discord.NotFound:
-            return await ctx.send(
-                f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
-        if voice_client is not None:
-            vc = voice_client
-        else:
+        try:  # Try to get the voice client
+            vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        except discord.NotFound:  # Else we are not in any voice channel
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
 
+        # Get the remix or return
         if music == 1:
             name = "`Spaz in action` remix"
             audio_source = discord.FFmpegPCMAudio(
@@ -85,6 +87,7 @@ class Audio(commands.Cog):
             await vc.disconnect()
             return await ctx.send("You did not specify a correct remix number.")
 
+        # Try playing audio or if already playing return with a message
         try:
             vc.play(audio_source)
             await ctx.send(f"Now Playing: {name}")
@@ -92,23 +95,18 @@ class Audio(commands.Cog):
             return await ctx.send("Already playing an audio, stop the current audio or wait for completion of the "
                                   "current audio before playing next one.")
 
-        await self.audioStop(ctx)
+        await self.audioStop(ctx)  # Start timer to leave the channel
 
     @play.command()
     async def sound(self, ctx, search: str):
         """To play a BombSquad in-built audio"""
-        try:
-            voice_client: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        try:  # Get voice client or return
+            vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         except discord.NotFound:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
 
-        if voice_client is not None:
-            vc = voice_client
-        else:
-            return await ctx.send(
-                f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
-
+        # Find which audio to play or return if none matched
         audio_source = None
         name = None
         for sound in self.bot.bssounds:
@@ -117,10 +115,10 @@ class Audio(commands.Cog):
                     source=os.path.join(self.bot.basedir, f'bssounds/{str(sound)}'))
                 name = "`" + str(sound)[:-4] + "` audio."
                 break
-
         if audio_source is None:
             return await ctx.send(f"No BombSquad audio found for `{search}`.")
 
+        # Play or if playing the n return
         try:
             vc.play(audio_source)
             await ctx.send(f"Now Playing: {name}")
@@ -128,6 +126,7 @@ class Audio(commands.Cog):
             return await ctx.send("Already playing an audio, stop the current audio or wait for completion of the "
                                   "current audio before playing next one.")
 
+        # Timer to stop if not playing
         await self.audioStop(ctx)
 
     @commands.command()

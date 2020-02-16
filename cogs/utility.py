@@ -21,11 +21,14 @@ class Utility(commands.Cog):
     @utils.developer()
     async def _presence(self, ctx, option=None, *, value=None):
         """Change the bot's presence"""
+
+        # One fo the developer only command to change the bot's presence
         if option is None:
             await ctx.send(f'Usage: `{ctx.prefix}presence [game/stream/watch/listen] [message]`')
         else:
             if option.lower() == 'stream':
-                await self.bot.change_presence(activity=discord.Streaming(name=value, url='https://www.twitch.tv/a'),
+                v = str(value).split("||-sep-||")
+                await self.bot.change_presence(activity=discord.Streaming(name=v[0], url=v[1]),
                                                status='online')
                 await ctx.send(f'Set presence to. `Streaming {value}`')
             elif option.lower() == 'game':
@@ -82,15 +85,19 @@ class Utility(commands.Cog):
     @modmanager.command()
     async def list(self, ctx):
         """To list all mods of BombSquad game."""
+
+        # Get the data of the current available to download mods
         repo = "Mrmaxmeier/BombSquad-Community-Mod-Manager"
         url = f"https://raw.githubusercontent.com/{repo}/master/index.json"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 data = json.loads(await resp.read())
+
         mods = data.get("mods", {})
         pages = []
         number = 0
         for mod in mods:
+            # Add an embed page for each downloadable mod
             number += 1
             filename = str(mods[mod].get("filename", None))
             em = discord.Embed(title="Mods list of BombSquad Game",
@@ -99,6 +106,8 @@ class Utility(commands.Cog):
             em.add_field(name=str(mod),
                          value=f"[Download Link](https://raw.githubusercontent.com/{repo}/master/mods/{filename})")
             pages.append(em)
+
+        # Run the session
         p_session = paginator.PaginatorSession(ctx=ctx, timeout=120, pages=pages, color=utils.random_color(),
                                                footer="List of all BombSquad game's mods in the ModManager.")
         await p_session.run()
@@ -106,23 +115,25 @@ class Utility(commands.Cog):
     @modmanager.command()
     async def search(self, ctx, *, search: str):
         """Search a mod in the BombSquad game's mod manager list."""
+
+        # Get the downloadable mods
         repo = "Mrmaxmeier/BombSquad-Community-Mod-Manager"
         url = f"https://raw.githubusercontent.com/{repo}/master/index.json"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 data = json.loads(await resp.read())
         mods = data.get("mods", {})
+
         em = discord.Embed(title=search, description=f"Search results for `{search}`.", color=utils.random_color())
         for mod in mods:
             if str(mod).lower().__contains__(search.lower()):
+                # Loop through all mods and select the matching ones
                 filename = str(mods[mod].get("filename", None))
                 em.add_field(name=str(mod),
                              value=f"[Download Link](https://raw.githubusercontent.com/{repo}/master/mods/{filename})")
         await ctx.send(embed=em)
 
-    @commands.group(
-        aliases=["accessoriesmanager", "accessories-manager"],
-        invoke_without_command=True)
+    @commands.group(aliases=["accessoriesmanager", "accessories-manager"], invoke_without_command=True)
     async def accessories(self, ctx):
         """Search an accessory or list all accessories in my made BombSquad game's official accessories archive."""
         await ctx.send(f"use this command as:\n"
@@ -132,15 +143,19 @@ class Utility(commands.Cog):
     @accessories.command(name="list")
     async def _list(self, ctx):
         """To list all accessories of the BombSquad game."""
+
+        # Get all available accessories
         repo = "I-Am-The-Great/BombSquad-Official-Accessory-Archive"
         url = f"https://raw.githubusercontent.com/{repo}/master/index.json"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 data = json.loads(await resp.read())
         all_files = data.get("all-files", {})
+
         pages = []
         number = 0
         for accessory in all_files:
+            # Add each accessory as an embed page
             number += 1
             filename = str(all_files[accessory].get("filename", None))
             author = str(all_files[accessory].get("author", None))
@@ -150,12 +165,17 @@ class Utility(commands.Cog):
                                color=utils.random_color())
             em.add_field(name="Accessory Name", value=name)
             em.add_field(name="Author", value=author)
+
+            # If accessory is single file give download link
             if not all_files[accessory].get("isCollection", False):
                 em.add_field(name="Download Link",
                              value=f"https://raw.githubusercontent.com/{repo}/master/all-files/{filename}")
+
+            # Else give the link to view it on Github
             else:
                 rdir = str(all_files[accessory].get("rdir", None))
                 em.add_field(name="Github Link", value=f"https://github.com/{repo}/tree/master/all-files/{rdir}")
+
             pages.append(em)
         p_session = paginator.PaginatorSession(ctx=ctx, timeout=120, pages=pages, color=utils.random_color(),
                                                footer="List of all BombSquad game's accessory in the AccessoryArchive.")
@@ -164,12 +184,16 @@ class Utility(commands.Cog):
     @accessories.command(name="search")
     async def _search(self, ctx, *, search: str):
         """To search for an accessory in the list of all accessories."""
+
+        # Get available accessories
         repo = "I-Am-The-Great/BombSquad-Official-Accessory-Archive"
         url = f"https://raw.githubusercontent.com/{repo}/master/index.json"
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 data = json.loads(await resp.read())
         all_files = data.get("all-files", {})
+
+        # Add only those accessories that matches the search term
         em = discord.Embed(title=search, description=f"Search results for `{search}`.", color=utils.random_color())
         for accessory in all_files:
             if str(accessory).lower().__contains__(search.lower()):
@@ -190,6 +214,8 @@ class Utility(commands.Cog):
     @commands.command()
     async def datetime(self, ctx, tz=None):
         """Get the current date and time for a time zone or UTC."""
+
+        # Send the current datetime
         now = datetime.datetime.now(tz=pytz.UTC)
         if tz:
             try:
@@ -207,6 +233,7 @@ class Utility(commands.Cog):
         em = discord.Embed(title=str(query), color=utils.random_color())
         em.set_footer(text='Powered by wikipedia.org')
         try:
+            # Search the query on wikipedia
             result = wikipedia.summary(query)
             if len(result) > 2000:
                 em.description = f"Result is too long. View the website [here](https://wikipedia.org/wiki/" \
@@ -231,28 +258,28 @@ class Utility(commands.Cog):
         em.title = f"{ctx.author} | User ID: {ctx.author.id}"
         em.description = idea
         try:
-            if ctx.guild.icon_url:
-                em.set_footer(text=f"From {ctx.author.guild} | Server ID: {ctx.author.guild.id}",
-                              icon_url=ctx.guild.icon_url)
-            else:
-                em.set_footer(text=f"From {ctx.author.guild} | Server ID: {ctx.author.guild.id}")
+            i = ctx.guild.icon_url or self.bot.user.avatar_url
+            em.set_footer(text=f"From {ctx.author.guild} | Server ID: {ctx.author.guild.id}",
+                          icon_url=i)
         except:
             em.set_footer(text=f"Received from a Private channel.")
         await suggest.send(embed=em)
         await ctx.send("Your idea has been successfully sent to support server. Thank you!")
 
-    @commands.command()
+    @commands.command(aliases=["fan-art", "fan_art"])
     @commands.cooldown(1, 15, BucketType.user)
     async def fanart(self, ctx, url=None):
         """Submit an artwork made by you for this bot"""
         ch = self.bot.get_channel(612605556615806986)  # Fan-art channel
 
+        # Set up the embed
         em = discord.Embed(title="Fan Art", description="New fan art submission")
         i = str(ctx.author.avatar_url) if ctx.author.avatar_url else self.bot.user.avatar_url
         em.set_author(name=ctx.author.name, icon_url=i)
         now = datetime.datetime.utcnow()
         em.set_footer(text=f"Artwork submitted on {now:%A, %B %d, %Y} at {now:%I:%M:%S %p} UTC.")
 
+        # Get the media attachments of the accepted file types
         attachments: [discord.File] = []
         ex = [".jpg", ".png", ".gif", ".jpeg"]
         if url is not None:
@@ -271,6 +298,7 @@ class Utility(commands.Cog):
                 await ctx.send(f"The attachment {str(a.filename)} does not point to a file with valid extension.\n"
                                f"The allowed extensions are: {str(ex)}")
 
+        # Send it to the fan-arts submission channel if there are artworks attached else notify no artwork submitted
         if len(attachments) > 0:
             await ch.send(embed=em, files=attachments)
             for a in attachments:
@@ -283,6 +311,7 @@ class Utility(commands.Cog):
     @commands.group(invoke_without_command=True)
     async def math(self, ctx):
         """A command group for math commands"""
+        # A command group containing commands for performing basic maths
         await ctx.send(
             'Available commands:\n`add <a> <b>`\n`subtract <a> <b>`\n`multiply <a> <b>`\n`divide <a> <b>`\n`remainder '
             '<a> <b>`\n`power <a> <b>`\n`factorial <a>`')

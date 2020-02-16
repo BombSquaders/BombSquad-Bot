@@ -96,11 +96,17 @@ class Misc(commands.Cog):
 
         # Example of a command that needs upvote
         if self.bot.dbl_client is not None:
+
+            # First check if the user is in bot's vote cache
             u = self.bot.dbl_user_votes.get(str(ctx.author.id), {})
             voted = u.get("voted", None)
             cache_time = u.get("cache_time")
+
+            # If not or if it is for longer than 15 minutes then retrieve a fresh vote data of the user
             if voted is None and cache_time - datetime.datetime.utcnow() > datetime.timedelta(minutes=15):
                 voted = await self.bot.dbl_client.get_user_vote(ctx.author.id)
+
+                # And save it to the cache
                 self.bot.dbl_user_votes[str(ctx.author.id)]["voted"] = voted
                 self.bot.dbl_user_votes[str(ctx.author.id)]["cache_time"] = datetime.datetime.utcnow()
         else:
@@ -109,11 +115,14 @@ class Misc(commands.Cog):
             await ctx.send(f"You need to upvote on my DBL page to use this command ({ctx.command.prefix}upvote).")
             return await ctx.send("Wait for 15 minutes after voting to use this command.")
 
+        # Get the number of comics available and choose one from them
         async with aiohttp.ClientSession() as session:
             async with session.get(f'http://xkcd.com/info.0.json') as resp:
                 data = await resp.json()
                 current_comic = data['num']
         rand = random.randint(0, current_comic)  # max = current comic
+
+        # Retrieve the chosen one's data and send
         async with aiohttp.ClientSession() as session:
             async with session.get(f'http://xkcd.com/{rand}/info.0.json') as resp:
                 data = await resp.json()
@@ -141,6 +150,7 @@ class Misc(commands.Cog):
     @commands.command(aliases=["joke"])
     async def bombjoke(self, ctx):
         """Get a bomb joke."""
+        # Chose a random joke and send it
         joke = random.choice(self.bot.jokes["titles"])
         em = discord.Embed(color=utils.random_color())
         em.title = str(joke)
@@ -152,26 +162,34 @@ class Misc(commands.Cog):
     @commands.cooldown(1, 5, BucketType.user)
     async def trivia(self, ctx):
         """Get a trivia of questions related to the BombSquad game."""
+
+        # Select a random question
         trivia = self.bot.trivias[random.choice([x for x in self.bot.trivias])]
         options = trivia["options"]
         answers = trivia["answers"]
+
+        # Set up the title and description of the message
         em = discord.Embed(color=utils.random_color())
         em.title = str(trivia["question"])
         em.description = "Send in chat the correct option."
         number = 0
+
+        # Set up the options
         for option in options:
             number += 1
             em.add_field(name=f"{number}", value=str(option))
         em.set_footer(text="Answer in 15 secs.")
         await ctx.send(embed=em)
 
+        # Wait for answer and return on timeout
         def check(m):
             return m.author == ctx.author and m.channel == ctx.message.channel
-
         try:
             reply = await self.bot.wait_for('message', check=check, timeout=15.0)
         except asyncio.TimeoutError:
             return await ctx.send("You took much time.")
+
+        # Check the answer
         if str(reply.content) in answers:
             await ctx.send("Congratulations! You won the trivia.")
         else:
