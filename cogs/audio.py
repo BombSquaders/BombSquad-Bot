@@ -13,14 +13,22 @@ class Audio(commands.Cog):
 
     async def audioStop(self, ctx):
         """To leave voice channel after done"""
-        await asyncio.sleep(30)
-        vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
-        if vc is not None:
-            if not vc.is_playing():
-                try:
-                    await vc.disconnect()
-                except:
-                    traceback.print_exc()
+        i = 0
+        while i < 5:
+            await asyncio.sleep(30)
+            vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+            if vc is not None:
+                if not vc.is_playing():
+                    try:
+                        await vc.disconnect()
+                        await ctx.send("Left the voice channel due to half minute of inactivity.")
+                        break
+                    except:
+                        traceback.print_exc()
+                        break
+            else:
+                break
+            i += 1
 
     @commands.command()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
@@ -63,6 +71,7 @@ class Audio(commands.Cog):
         else:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
+
         if music == 1:
             name = "`Spaz in action` remix"
             audio_source = discord.FFmpegPCMAudio(
@@ -75,12 +84,15 @@ class Audio(commands.Cog):
             await vc.stop()
             await vc.disconnect()
             return await ctx.send("You did not specify a correct remix number.")
+
         try:
-            vc.play(audio_source, after=self.audioStop(ctx))
+            vc.play(audio_source)
             await ctx.send(f"Now Playing: {name}")
         except discord.ClientException:
             return await ctx.send("Already playing an audio, stop the current audio or wait for completion of the "
                                   "current audio before playing next one.")
+
+        await self.audioStop(ctx)
 
     @play.command()
     async def sound(self, ctx, search: str):
@@ -90,11 +102,13 @@ class Audio(commands.Cog):
         except discord.NotFound:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
+
         if voice_client is not None:
             vc = voice_client
         else:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
+
         audio_source = None
         name = None
         for sound in self.bot.bssounds:
@@ -103,14 +117,18 @@ class Audio(commands.Cog):
                     source=os.path.join(self.bot.basedir, f'bssounds/{str(sound)}'))
                 name = "`" + str(sound)[:-4] + "` audio."
                 break
+
         if audio_source is None:
             return await ctx.send(f"No BombSquad audio found for `{search}`.")
+
         try:
-            vc.play(audio_source, after=self.audioStop(ctx))
+            vc.play(audio_source)
             await ctx.send(f"Now Playing: {name}")
         except discord.ClientException:
             return await ctx.send("Already playing an audio, stop the current audio or wait for completion of the "
                                   "current audio before playing next one.")
+
+        await self.audioStop(ctx)
 
     @commands.command()
     async def pause(self, ctx):
