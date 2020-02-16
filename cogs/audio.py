@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import os
+import traceback
 import asyncio
 
 
@@ -9,6 +10,17 @@ class Audio(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    async def audioStop(self, ctx):
+        """To leave voice channel after done"""
+        await asyncio.sleep(30)
+        vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+        if vc is not None:
+            if not vc.is_playing():
+                try:
+                    await vc.disconnect()
+                except:
+                    traceback.print_exc()
 
     @commands.command()
     async def join(self, ctx, *, channel: discord.VoiceChannel = None):
@@ -64,18 +76,11 @@ class Audio(commands.Cog):
             await vc.disconnect()
             return await ctx.send("You did not specify a correct remix number.")
         try:
-            vc.play(audio_source)
+            vc.play(audio_source, after=self.audioStop(ctx))
             await ctx.send(f"Now Playing: {name}")
         except discord.ClientException:
             return await ctx.send("Already playing an audio, stop the current audio or wait for completion of the "
                                   "current audio before playing next one.")
-        await asyncio.sleep(200)
-        if not vc.is_playing():
-            try:
-                vc.stop()
-                await vc.disconnect()
-            except:
-                pass
 
     @play.command()
     async def sound(self, ctx, search: str):
@@ -101,18 +106,11 @@ class Audio(commands.Cog):
         if audio_source is None:
             return await ctx.send(f"No BombSquad audio found for `{search}`.")
         try:
-            vc.play(audio_source)
+            vc.play(audio_source, after=self.audioStop(ctx))
             await ctx.send(f"Now Playing: {name}")
         except discord.ClientException:
             return await ctx.send("Already playing an audio, stop the current audio or wait for completion of the "
                                   "current audio before playing next one.")
-        await asyncio.sleep(200)
-        if not vc.is_playing():
-            try:
-                vc.stop()
-                await vc.disconnect()
-            except:
-                pass
 
     @commands.command()
     async def pause(self, ctx):

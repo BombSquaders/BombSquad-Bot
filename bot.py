@@ -19,10 +19,10 @@ extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.p
 
 
 # A function to get the prefix of the bot for a message
-def prefix(d_client, message):
+async def prefix(d_client, message):
     """Get prefix"""
     try:
-        return d_client.config.get_prefix(message.guild.id)
+        return await d_client.config.get_prefix(message.guild.id)
     except:
         return bot.default_prefix
 
@@ -259,7 +259,8 @@ async def on_guild_remove(g):
 
 async def send_cmd_help(ctx):
     cmd = ctx.command
-    em = discord.Embed(title=f'Usage: `{ctx.prefix + cmd.name} {cmd.signature}`', color=utils.random_color())
+    p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
+    em = discord.Embed(title=f'Usage: `{ctx.prefix + p + cmd.name} {cmd.signature}`', color=utils.random_color())
     em.description = cmd.help
     return em
 
