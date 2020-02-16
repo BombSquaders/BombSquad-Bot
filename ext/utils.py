@@ -80,13 +80,12 @@ async def mysql_set(bot, id: str, arg1: str = None, arg2: str = None, arg3: str 
     """Set data to a table in the bot's MySQL database"""
 
     async def to_run():
-        if arg3 is not None:
-            if arg3 == "join":
-                bot.MySQLCursor.execute("INSERT INTO `servers` (`id`, `prefix`, `add_time`, `bs_stats`) VALUES "
-                                        f"('{id}', 'bs!', '{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}',"
-                                        "'{}');")
-            elif arg3 == "remove":
-                bot.MySQLCursor.execute(f"DELETE FROM `servers` WHERE id={id};")
+        if arg3 == "join":
+            bot.MySQLCursor.execute("INSERT INTO `servers` (`id`, `prefix`, `add_time`, `bs_stats`) VALUES "
+                                    f"('{id}', 'bs!', '{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}',"
+                                    "'{}');")
+        elif arg3 == "remove":
+            bot.MySQLCursor.execute(f"DELETE FROM `servers` WHERE id={id};")
         else:
             if arg1 == "prefix":
                 bot.MySQLCursor.execute(f"UPDATE `servers` SET prefix='{arg2}' WHERE id={id};")

@@ -281,7 +281,7 @@ class Utility(commands.Cog):
 
         # Get the media attachments of the accepted file types from the urls and attachments
         attachments: [discord.File] = []
-        ex = [".jpg", ".png", ".gif", ".jpeg"]
+        ex = (".jpg", ".png", ".gif", ".jpeg")
         for url in urls:
             if not str(url).endswith(ex):
                 await ctx.send(f"The given url {str(url)} does not point to a file with valid extension.\n"
@@ -290,19 +290,20 @@ class Utility(commands.Cog):
                 async with aiohttp.ClientSession() as session:
                     async with session.get(str(url)) as resp:
                         content = io.BytesIO(await resp.content.read())
-                        attachments.append(discord.File(content))
+                        attachments.append(
+                            discord.File(content, filename=str(url).replace("http://", "").replace("https://", "")))
         for a in ctx.message.attachments:
             if str(a.filename).endswith(ex):
-                attachments.append(a.to_file())
+                attachments.append(await a.to_file())
             else:
                 await ctx.send(f"The attachment {str(a.filename)} does not point to a file with valid extension.\n"
                                f"The allowed extensions are: {str(ex)}")
 
         # Send it to the fan-arts submission channel if there are artworks attached else notify no artwork submitted
         if len(attachments) > 0:
-            await ch.send(embed=em, files=attachments)
-            for a in attachments:
-                await utils.mysql_set(self.bot, id=ctx.author.name, arg1="fan_arts", arg2=a.url,
+            msg = await ch.send(embed=em, files=attachments)
+            for a in msg.attachments:
+                await utils.mysql_set(self.bot, id=str(ctx.author.name), arg1="fan_arts", arg2=a.url,
                                       arg3=now.strftime('%Y-%m-%d %H:%M:%S'))
             await ctx.send("The accepted extensions artworks are successfully sent to the support server.")
         else:
