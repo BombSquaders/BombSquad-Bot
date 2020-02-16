@@ -1,9 +1,10 @@
 import discord
 from discord.ext import commands
 from discord.ext.commands.cooldowns import BucketType
-import random
 import aiohttp
 import asyncio
+import datetime
+import random
 from ext import utils
 
 
@@ -34,7 +35,6 @@ class Misc(commands.Cog):
             em = discord.Embed(color=discord.Color(value=0xffff00))
         else:
             em = discord.Embed(color=discord.Color.red())
-
         response = responses[num]
 
         em.title = f"🎱{question}"
@@ -96,11 +96,18 @@ class Misc(commands.Cog):
 
         # Example of a command that needs upvote
         if self.bot.dbl_client is not None:
-            voted = await self.bot.dbl_client.get_user_vote(ctx.author.id)
+            u = self.bot.dbl_user_votes.get(str(ctx.author.id), {})
+            voted = u.get("voted", None)
+            cache_time = u.get("cache_time")
+            if voted is None and cache_time - datetime.datetime.utcnow() > datetime.timedelta(minutes=15):
+                voted = await self.bot.dbl_client.get_user_vote(ctx.author.id)
+                self.bot.dbl_user_votes[str(ctx.author.id)]["voted"] = voted
+                self.bot.dbl_user_votes[str(ctx.author.id)]["cache_time"] = datetime.datetime.utcnow()
         else:
             voted = True
         if not voted:
-            return await ctx.send(f"You need to upvote on my DBL page to use this command ({ctx.command.prefix}upvote)")
+            await ctx.send(f"You need to upvote on my DBL page to use this command ({ctx.command.prefix}upvote).")
+            return await ctx.send("Wait for 15 minutes after voting to use this command.")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(f'http://xkcd.com/info.0.json') as resp:

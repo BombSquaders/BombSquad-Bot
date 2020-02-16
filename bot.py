@@ -4,6 +4,7 @@ import dbl
 from ext import utils, config
 from ext.paginator import PaginatorSession
 import traceback
+from datetime import datetime
 import inspect
 import asyncio
 import os
@@ -84,6 +85,7 @@ bot.default_prefix = "bs!"  # The bot's default prefix for new servers
 bot.creator = BotCreator()  # Set the Bot Creator attribute
 dt = os.environ.get("bot_dbl_token")
 bot.dbl_token = dt if dt != "None" else None  # The Discord Bot List token
+bot.dbl_user_votes = {}  # For caching the users who upvote the bot
 
 # Now setting some custom attributes for our bot for later use
 bot.announcement = None
@@ -152,12 +154,23 @@ async def on_ready():
     await bot.change_presence(activity=discord.Game(name=f"in {len(bot.guilds)} servers | bs!help", type=2),
                               status=discord.Status.online, afk=True)  # The bot is ready to use
 
-    if bot.dbl_client is not None:  # If we have our DBL client then post the servers count
+    if bot.dbl_client is not None:  # If we have our DBL client then post the servers count and cache the bot upvotes
         await bot.dbl_client.post_guild_count()
+        for u in await bot.dbl_client.get_bot_upvotes():
+            bot.dbl_user_votes[str(u.id)]["voted"] = True
+            bot.dbl_user_votes[str(u.id)]["cache_time"] = datetime.utcnow()
 
     if not inpt:  # If we are not reading input from the terminal then start reading it
         inpt = True
         t.start()
+
+
+@bot.event
+async def on_dbl_vote(data):
+    if int(data["bot"]) == bot.user.id:
+        uid = data["user"]
+        bot.dbl_user_votes[str(uid)]["voted"] = True
+        bot.dbl_user_votes[str(uid)]["cache_time"] = datetime.utcnow()
 
 
 @bot.event
