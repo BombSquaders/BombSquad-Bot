@@ -42,6 +42,10 @@ Make sure of following points before trying to run the bot:-
 And after you have done all changes and these points are ensured you can run the bot simply by opening a terminal in the root
  directory and type in the terminal `python bot.py` or `<python version/path> bot.py` based on your OS settings.
 
+## Other README files
+There are more README files spread in the directories on this branch of this repository.
+The different README files are located at [cogs/README.md](/cogs/README.md), [data/README.md](/data/README.md), and [ext/README.md](/ext/README.md)
+
 ## Website
 The source code used for the Website of BombSquad bot is also available on a seperate branch of this repository.
  The source code of the website is also documented with README files and is ready to be used with some of your tweaks.
