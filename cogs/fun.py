@@ -9,7 +9,7 @@ from ext import utils
 
 
 class Misc(commands.Cog):
-    """But fun commands."""
+    """Bot fun commands."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -58,8 +58,8 @@ class Misc(commands.Cog):
     @commands.cooldown(1, 2.5, BucketType.user)
     async def dice(self, ctx, number=1, noembed: str = None):
         """Rolls a certain number of dice less or equal to 10"""
-        if number > 10:
-            number = 10
+        if number > 25:
+            number = 25
 
         fmt = ''
         for i in range(1, number + 1):

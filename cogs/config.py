@@ -223,6 +223,7 @@ class Config(commands.Cog):
         data = await self.bot.config.get_bstats(ctx.guild.id)
         if data.get(str(sid), None) is not None:
             data.pop(str(sid))
+            await ctx.send(f"Okay, the entry with the ID=`{sid}` has been deleted")
         else:
             return await ctx.send("Invalid ID no server stats set to retrieve from the given ID."
                                   f"Use `{ctx.prefix}bs_stats list` command to get a list of set bs server stats.")

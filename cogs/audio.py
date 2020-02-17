@@ -18,7 +18,8 @@ class Audio(commands.Cog):
             await asyncio.sleep(30)  # Wait for 30 seconds
             vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
             if vc is not None:  # If the bot is connected to voice in the server
-                if not vc.is_playing():  # if it is not playing then we need to disconnect and break the loop
+                # If it is not playing and also not paused then we need to disconnect and break the loop
+                if not (vc.is_playing() and vc.is_paused()):
                     try:
                         await vc.disconnect()
                         await ctx.send("Left the voice channel due to half minute of inactivity.")
@@ -133,15 +134,11 @@ class Audio(commands.Cog):
     async def pause(self, ctx):
         """To pause the current playing audio."""
         try:
-            voice_client: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+            vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         except discord.NotFound:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
-        if voice_client is not None:
-            vc = voice_client
-        else:
-            return await ctx.send(
-                f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
+
         if vc.is_playing():
             vc.pause()
             em = discord.Embed(title="Paused", description=f"Paused the current music.")
@@ -153,15 +150,11 @@ class Audio(commands.Cog):
     async def resume(self, ctx):
         """To resume the current paused audio."""
         try:
-            voice_client: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+            vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         except discord.NotFound:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
-        if voice_client is not None:
-            vc = voice_client
-        else:
-            return await ctx.send(
-                f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
+
         if vc.is_paused():
             vc.resume()
             em = discord.Embed(title="Resumed", description=f"Resumed the current music.")
@@ -173,15 +166,11 @@ class Audio(commands.Cog):
     async def stop(self, ctx):
         """To stop the current audio."""
         try:
-            voice_client: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+            vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         except discord.NotFound:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
-        if voice_client is not None:
-            vc = voice_client
-        else:
-            return await ctx.send(
-                f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
+
         if vc.is_connected() and (vc.is_paused() or vc.is_playing()):
             vc.stop()
             em = discord.Embed(title="Stopped", description=f"Stopped the current music.")
@@ -196,15 +185,14 @@ class Audio(commands.Cog):
     async def disconnect(self, ctx):
         """To make the bot leave the voice channel."""
         try:
-            voice_client: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
+            vc: discord.VoiceClient = discord.utils.get(self.bot.voice_clients, guild=ctx.guild)
         except discord.NotFound:
             return await ctx.send(
                 f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
-        if voice_client is not None:
-            vc = voice_client
-        else:
-            return await ctx.send(
-                f"I am not in any channel, first use the join command in a voice channel: `{ctx.prefix}join`")
+
+        if not ctx.author.guild_permissions.move_members and vc.is_playing():
+            return ctx.send("You do not have the permissions to move members and I am playing an audio.")
+
         await vc.disconnect(force=True)
 
 
