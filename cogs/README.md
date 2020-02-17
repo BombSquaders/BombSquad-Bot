@@ -45,4 +45,4 @@ To enable this cog follow the given steps:-
 ## Utility cog
 This cog has several commands and command groups that are very important and one of the
  special features of this bot. It also has some developer only commands to be used by
- the bot's developers only. It also has some maths calculating functions.
+ the bot's developers only.
