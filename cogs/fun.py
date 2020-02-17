@@ -5,6 +5,7 @@ import aiohttp
 import asyncio
 import datetime
 import random
+import json
 from ext import utils
 
 
@@ -141,7 +142,7 @@ class Misc(commands.Cog):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(f'http://numbersapi.com/{number}?json') as resp:
-                    file = await resp.json()
+                    file = json.loads(await resp.read())
                     fact = file['text']
                     await ctx.send(f"**Did you know?**\n*{fact}*")
         except KeyError:
