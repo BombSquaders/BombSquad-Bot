@@ -114,7 +114,7 @@ class Misc(commands.Cog):
             voted = True
         if not voted:
             await ctx.send(f"You need to upvote on my DBL page to use this command ({ctx.command.prefix}upvote).")
-            return await ctx.send("Wait for 15 minutes after voting to use this command.")
+            return await ctx.send("Wait for 15 seconds after voting to use this command.")
 
         # Get the number of comics available and choose one from them
         async with aiohttp.ClientSession() as session:

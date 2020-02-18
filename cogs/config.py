@@ -16,11 +16,17 @@ class Config(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
-    async def prefix(self, ctx, *, pre):
+    async def prefix(self, ctx, *, pre=None):
         """Set a custom prefix for the guild."""
 
-        # Get and set prefix
+        # Get prefix
         result = await self.bot.config.get_prefix(str(ctx.guild.id))
+
+        if pre is None:
+            return await ctx.send(f"The current prefix in this guild is `{result}`.\n"
+                                  f"To set new prefix use: `{result}prefix <new prefix>`.")  # Return prefix if asked
+
+        # Else set new prefix
         await self.bot.config.update(str(ctx.guild.id), "prefix", str(pre))
 
         # Send confirmation

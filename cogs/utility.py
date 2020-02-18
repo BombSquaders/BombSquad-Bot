@@ -17,64 +17,6 @@ class Utility(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name='presence', hidden=True)
-    @utils.developer()
-    async def _presence(self, ctx, option=None, *, value=None):
-        """Change the bot's presence"""
-
-        # One fo the developer only command to change the bot's presence
-        if option is None:
-            await ctx.send(f'Usage: `{ctx.prefix}presence [game/stream/watch/listen] [message]`')
-        else:
-            if option.lower() == 'stream':
-                v = str(value).split("||-sep-||")
-                await self.bot.change_presence(activity=discord.Streaming(name=v[0], url=v[1]),
-                                               status='online')
-                await ctx.send(f'Set presence to. `Streaming {value}`')
-            elif option.lower() == 'game':
-                await self.bot.change_presence(activity=discord.Game(name=value))
-                await ctx.send(f'Set presence to `Playing {value}`')
-            elif option.lower() == 'watch':
-                await self.bot.change_presence(activity=discord.Activity(name=value, type=3), afk=True)
-                await ctx.send(f'Set presence to `Watching {value}`')
-            elif option.lower() == 'listen':
-                await self.bot.change_presence(activity=discord.Activity(name=value, type=2), afk=True)
-                await ctx.send(f'Set presence to `Listening to {value}`')
-            elif option.lower() == 'clear':
-                await self.bot.change_presence(activity=None)
-                await ctx.send('Cleared Presence')
-            elif option.lower() == 'offline':
-                await self.bot.change_presence(status=discord.Status.offline)
-                await ctx.send('Done')
-            elif option.lower() == 'online':
-                await self.bot.change_presence(status=discord.Status.online)
-                await ctx.send('Done')
-            elif option.lower() == 'dnd':
-                await self.bot.change_presence(status=discord.Status.do_not_disturb)
-                await ctx.send('Done')
-            elif option.lower() == 'idle':
-                await self.bot.change_presence(status=discord.Status.idle)
-                await ctx.send('Done')
-            else:
-                await ctx.send(f'Usage: `{ctx.prefix}presence [game/stream/watch/listen] [message]`')
-
-    @commands.command(hidden=True)
-    @utils.developer()
-    async def source(self, ctx, command):
-        """Get the source code for any command."""
-        source = inspect.getsource(self.bot.get_command(command).callback)
-        if not source:
-            return await ctx.send(f'{command} is not a valid command.')
-        try:
-            await ctx.send(f'```py\n{source}\n```')
-        except:
-            paginated_text = utils.paginate(source)
-            for page in paginated_text:
-                if page == paginated_text[-1]:
-                    await ctx.send(f'```py\n{page}\n```')
-                    break
-                await ctx.send(f'```py\n{page}\n```')
-
     @commands.group(aliases=["bombsquadmods", "bombsquad-mods", "mod-manager"], invoke_without_command=True)
     async def modmanager(self, ctx):
         """To search or list all the mods of BombSquad game in the mod manager."""

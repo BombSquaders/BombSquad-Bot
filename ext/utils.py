@@ -56,7 +56,7 @@ async def mysql_get(bot, server_id: str):
     async def to_run():
         bot.MySQLConnection.cmd_refresh(1)
         bot.MySQLCursor.execute(f"SELECT * FROM `servers` WHERE id={server_id};")
-        new = [(server_id, ";", datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), "0", None, {})]
+        new = [(server_id, bot.default_prefix, datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), "0", None, {})]
         data = bot.MySQLCursor.fetchall()
 
         if len(data) == 0:  # Passes if the database does not have any entry for the asked server

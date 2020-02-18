@@ -5,12 +5,8 @@ from ext import utils, config
 from ext.paginator import PaginatorSession
 import traceback
 from datetime import datetime
-import inspect
 import asyncio
 import os
-import io
-from contextlib import redirect_stdout
-import textwrap
 from threading import Thread
 import sys
 import mysql.connector
@@ -22,10 +18,7 @@ extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.p
 # A function to get the prefix of the bot for a message
 async def prefix(d_client, message):
     """Get prefix"""
-    try:
-        return await d_client.config.get_prefix(message.guild.id)
-    except:
-        return bot.default_prefix
+    return commands.when_mentioned_or(await d_client.config.get_prefix(message.guild.id))(d_client, message)
 
 
 # A Thread to get the commands input from the terminal after running the bot
@@ -76,14 +69,14 @@ class BotCreator(object):
     bot_invite_perms = "36981824"  # Bot invite required permissions, use 1077406934 if you want to use the mods cog
 
 
-# Our bot instance
+# Our bot instance, use commands.AutoShardedBot if the bot passes 1000 server
 bot = commands.Bot(command_prefix=prefix,
-                   description=f"A discord bot made by {BotCreator.name} having special brand new features related"
-                               " to the BombSquad game.")
+                   description=f"A discord bot made by {BotCreator.name} having special brand new features "
+                               f"related to the BombSquad game.")
 bot.remove_command('help')  # We will add a new help command for our bot later
 bot.default_prefix = "bs!"  # The bot's default prefix for new servers
 bot.creator = BotCreator()  # Set the Bot Creator attribute
-dt = os.environ.get("bot_dbl_token")
+dt = str(os.environ.get("bot_dbl_token", None))
 bot.dbl_token = dt if dt != "None" else None  # The Discord Bot List token
 bot.dbl_user_votes = {}  # For caching the users who upvote the bot
 
@@ -91,7 +84,6 @@ bot.dbl_user_votes = {}  # For caching the users who upvote the bot
 bot.announcement = None
 bot.config = None
 bot.dbl_client = None
-bot.loading = True
 bot.last_result = None
 
 
@@ -149,7 +141,6 @@ async def on_ready():
         bot.dbl_client = dbl.DBLClient(bot, bot.dbl_token)
 
     print("Ready for use.")
-    bot.loading = False
 
     await bot.change_presence(activity=discord.Game(name=f"in {len(bot.guilds)} servers | bs!help", type=2),
                               status=discord.Status.online, afk=True)  # The bot is ready to use
@@ -214,21 +205,7 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_message(message):
-    if bot.loading:
-        return
-    channel = message.channel
-    if message.author.bot:
-        return
-
-    # Check if the bot's prefix is being asked
-    if bot.user.mentioned_in(message) and not message.mention_everyone:
-        if 'prefix' in message.content.lower():
-            await channel.send(f'The bot\'s prefix in this server is `{await prefix(bot, message)}`')
-        elif 'help' in message.content.lower():
-            await channel.send(f'For getting help use command `{await prefix(bot, message)}help`')
-        else:
-            await message.add_reaction('👀')  # :eyes:
-            await message.add_reaction("❓")  # question mark
+    if not bot.is_ready() or message.author.bot:
         return
 
     await bot.process_commands(message)
@@ -242,9 +219,10 @@ async def on_guild_join(g):
     # Try to send a thank you message to the right channel in the server
     while not success:
         try:
+            p = await bot.config.get_prefix(g.id)
             await g.channels[i].send(
-                f"Hello! Thanks for inviting me to your server. To set a custom prefix, use `{bot.default_prefix}prefix"
-                f" <prefix>`. For more help, use `{bot.default_prefix}help`.")
+                f"Hello! Thanks for inviting me to your server. To set a custom prefix, use `{p}prefix"
+                f" <prefix>`. For more help, use `{p}help`.")
         except (discord.Forbidden, AttributeError):
             i += 1
         except IndexError:
@@ -273,7 +251,8 @@ async def on_guild_remove(g):
 async def send_cmd_help(ctx):
     cmd = ctx.command
     p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
-    em = discord.Embed(title=f'Usage: `{ctx.prefix + p + cmd.name} {cmd.signature}`', color=utils.random_color())
+    pre = await bot.config.get_prefix(ctx.guild.id)
+    em = discord.Embed(title=f'Usage: `{pre + p + cmd.name} {cmd.signature}`', color=utils.random_color())
     em.description = cmd.help
     return em
 
@@ -297,14 +276,16 @@ def format_cog_help(cog, em):
     return em
 
 
-def format_command_help(ctx, cmd, em):
+async def format_command_help(ctx, cmd, em):
     """Format help for a command"""
 
+    pre = await bot.config.get_prefix(ctx.guild.id)
+
     if hasattr(cmd, 'invoke_without_command') and cmd.invoke_without_command:
-        c = f'`Usage: {ctx.prefix + cmd.name} {cmd.signature}`'
+        c = f'`Usage: {pre + cmd.name} {cmd.signature}`'
     else:
         p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
-        c = f'`{ctx.prefix + p + cmd.name} {cmd.signature}` {cmd.short_doc}'
+        c = f'`{pre + p + cmd.name} {cmd.signature}` {cmd.short_doc}'
     em.add_field(
         name=cmd.name,
         value=c,
@@ -314,19 +295,20 @@ def format_command_help(ctx, cmd, em):
     return em
 
 
-def format_bot_help(ctx):
+async def format_bot_help(ctx):
     signatures = []
     fmt = ''
     bot_commands = []
+    pre = await bot.config.get_prefix(ctx.guild.id)
     for cmd in bot.commands:
         if not cmd.hidden:
             if not cmd.cog:
                 bot_commands.append(cmd)
-                signatures.append(len(cmd.name) + len(ctx.prefix))
+                signatures.append(len(cmd.name) + len(pre))
     max_length = max(signatures)
     abc = sorted(bot_commands, key=lambda x: x.name)
     for c in abc:
-        fmt += f'`{ctx.prefix + c.name:<{max_length}} '
+        fmt += f'`{pre + c.name:<{max_length}} '
         fmt += f'{c.short_doc:<{max_length}}`\n'
     em = discord.Embed(title='Bot', color=utils.random_color())
     em.set_thumbnail(url=bot.user.avatar_url)
@@ -341,6 +323,7 @@ async def _help(ctx, *, command: str = None):
     """Shows this message"""
 
     pages = []
+    pre = await bot.config.get_prefix(ctx.guild.id)
 
     if command is not None:
         cog = bot.get_cog(command.replace(' ', '_').title())
@@ -351,18 +334,18 @@ async def _help(ctx, *, command: str = None):
         )
         em.set_thumbnail(url=bot.user.avatar_url)
         em.set_footer(
-            text=f'Type `{ctx.prefix}help <command>` for more info on a command.',
+            text=f'Type `{pre}help <command>` for more info on a command.',
             icon_url=bot.user.avatar_url
         )
         if cog is not None:
             em = format_cog_help(command.replace(' ', '_').title(), em)
         elif cmd is not None:
-            em = format_command_help(ctx, cmd, em)
+            em = await format_command_help(ctx, cmd, em)
         else:
             return await ctx.send('No commands or cog found which satisfies the name you gave.')
         return await ctx.send(embed=em)
 
-    pages.append(format_bot_help(ctx))
+    pages.append(await format_bot_help(ctx))
 
     for cog in bot.cogs:
         em = discord.Embed(
@@ -371,9 +354,10 @@ async def _help(ctx, *, command: str = None):
         )
         em.set_thumbnail(url=bot.user.avatar_url)
         em = format_cog_help(cog, em)
-        pages.append(em)
+        if not cog == "Developer":
+            pages.append(em)
 
-    p_session = PaginatorSession(ctx, footer=f'Type `{ctx.prefix}help <command>` for more info on a command.',
+    p_session = PaginatorSession(ctx, footer=f'Type `{pre}help <command>` for more info on a command.',
                                  pages=pages)
     await p_session.run()
 
@@ -476,109 +460,11 @@ async def vote(ctx):
     await ctx.send(embed=em)
 
 
-@bot.command(hidden=True)
-@utils.developer()
-async def announce(ctx, *, message):
-    """Tells everyone an announcement in the bot info command."""
-    bot.announcement = None if message == 'reset' else message
-    await ctx.send('Announcement successfully set.')
-
-
-# noinspection PyUnusedLocal
-@bot.command(name='py_val', hidden=True)
-@utils.developer()
-async def py_eval(ctx, *, body):
-    """Evaluates python code (MUST ONLY BE ACCESSED BY THE OWNER)"""
-    env = {
-        'ctx': ctx,
-        'channel': ctx.channel,
-        'author': ctx.author,
-        'guild': ctx.guild,
-        'message': ctx.message,
-        '_': bot.last_result,
-        'source': inspect.getsource
-    }
-
-    env.update(globals())
-    body = utils.cleanup_code(body)
-    stdout = io.StringIO()
-    err = out = None
-    to_compile = f'async def func(): \n{textwrap.indent(body, "  ")}'
-    try:
-        exec(to_compile, env)
-    except Exception as e:
-        err = await ctx.send(f'```py\n{e.__class__.__name__}: {e}\n```')
-        return await ctx.message.add_reaction('\u2049')
-    func = env['func']
-    try:
-        with redirect_stdout(stdout):
-            ret = await func()
-    except Exception as e:
-        value = stdout.getvalue()
-        err = await ctx.send(f'```py\n{value}{traceback.format_exc()}\n```')
-    else:
-        value = stdout.getvalue()
-        if ret is None:
-            if value:
-                try:
-                    out = await ctx.send(f'```py\n{value}\n```')
-                except:
-                    paginated_text = utils.paginate(value)
-                    for page in paginated_text:
-                        if page == paginated_text[-1]:
-                            out = await ctx.send(f'```py\n{page}\n```')
-                            break
-                        await ctx.send(f'```py\n{page}\n```')
-        else:
-            bot.last_result = ret
-            try:
-                out = await ctx.send(f'```py\n{value}{ret}\n```')
-            except:
-                paginated_text = utils.paginate(f"{value}{ret}")
-                for page in paginated_text:
-                    if page == paginated_text[-1]:
-                        out = await ctx.send(f'```py\n{page}\n```')
-                        break
-                    await ctx.send(f'```py\n{page}\n```')
-    if out:
-        await ctx.message.add_reaction('\u2705')  # tick
-    elif err:
-        await ctx.message.add_reaction('\u2049')  # x
-    else:
-        await ctx.message.add_reaction('\u2705')
-
-
-@bot.command(hidden=True)
-@utils.developer()
-async def reload(ctx, cog):
-    """Reloads a cog"""
-    try:
-        await ctx.message.delete()
-    except discord.Forbidden:
-        pass
-
-    if cog.lower() == 'all':
-        for cog in extensions:
-            try:
-                bot.unload_extension(f"cogs.{cog}")
-            except Exception as e:
-                await ctx.send(f"An error occurred while reloading {cog}, error details: \n ```{e}```")
-        for ex in extensions:
-            bot.load_extension("cogs." + ex)
-        return await ctx.send('All cogs updated successfully :white_check_mark:')
-    if cog not in extensions:
-        return await ctx.send(f'Cog {cog} does not exist.')
-    try:
-        bot.unload_extension(f"cogs.{cog}")
-        await asyncio.sleep(1)
-        bot.load_extension(f"cogs.{cog}")
-    except Exception as e:
-        await ctx.send(f"An error occurred while reloading {cog}, error details: \n ```python"
-                       f"\n{e}\n"
-                       f"```")
-    else:
-        await ctx.send(f"Reloaded the {cog} cog successfully :white_check_mark:")
-
-
 if __name__ == '__main__':
-    bot.run(os.environ.get('bot_discord_token'))
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(bot.start(bot.run(os.environ.get('bot_discord_token'))))
+    except KeyboardInterrupt:
+        loop.run_until_complete(bot.logout())  # Cancel all tasks lingering
+    finally:
+        loop.close()
