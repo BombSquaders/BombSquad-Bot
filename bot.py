@@ -18,7 +18,10 @@ extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.p
 # A function to get the prefix of the bot for a message
 async def prefix(d_client, message):
     """Get prefix"""
+    # This line lets the users either use mention or characters for command prefix
     return commands.when_mentioned_or(await d_client.config.get_prefix(message.guild.id))(d_client, message)
+    # Comment the above line and use just 'return await d_client.config.get_prefix(message.guild.id)' if you do not want
+    # the bot to respond to commands with bot mention as prefix
 
 
 # A Thread to get the commands input from the terminal after running the bot
