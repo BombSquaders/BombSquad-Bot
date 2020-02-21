@@ -28,8 +28,9 @@ class Developer(commands.Cog):
         else:
             if option.lower() == 'stream':
                 v = str(value).split("||-sep-||")
-                await self.bot.change_presence(activity=discord.Streaming(name=v[0], url=v[1]),
-                                               status='online')
+                await self.bot.change_presence(
+                    activity=discord.Streaming(name=str(v[0]).strip(), url=str(v[1]).strip()),
+                    status='online')
                 await ctx.send(f'Set presence to. `Streaming {value}`')
             elif option.lower() == 'game':
                 await self.bot.change_presence(activity=discord.Game(name=value))
@@ -79,7 +80,7 @@ class Developer(commands.Cog):
     @utils.developer()
     async def announce(self, ctx, *, message):
         """Tells everyone an announcement in the bot info command."""
-        self.bot.announcement = None if message == 'reset' else message
+        self.bot.announcement = None if str(message).lower() in ("reset", "clear", "none") else message
         await ctx.send('Announcement successfully set.')
 
     # noinspection PyUnusedLocal
@@ -154,7 +155,7 @@ class Developer(commands.Cog):
         except discord.Forbidden:
             pass
 
-        if cog.lower() == 'all':
+        if cog.lower() in ("all", "every"):
             for cog in self.extensions:
                 try:
                     self.bot.unload_extension(f"cogs.{cog}")
