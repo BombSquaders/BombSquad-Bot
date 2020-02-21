@@ -283,17 +283,15 @@ async def format_command_help(ctx, cmd, em):
     """Format help for a command"""
 
     pre = await bot.config.get_prefix(ctx.guild.id)
+    p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
 
     if hasattr(cmd, 'invoke_without_command') and cmd.invoke_without_command:
-        c = f'`Usage: {pre + cmd.name} {cmd.signature}`'
+        c = f'`{pre + p + cmd.name} {cmd.signature} <sub-command> [args]`'
     else:
-        p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
-        c = f'`{pre + p + cmd.name} {cmd.signature}` {cmd.short_doc}'
-    em.add_field(
-        name=cmd.name,
-        value=c,
-        inline=False
-    ).add_field(name='\u200b', value='\u200b', inline=False)
+        c = f'`{pre + p + cmd.name} {cmd.signature}`'
+    em.add_field(name="Usage syntax:", value=c, inline=False) \
+        .add_field(name="Description:", value=cmd.short_doc, inline=False) \
+        .add_field(name='\u200b', value='\u200b', inline=False)
 
     return em
 
@@ -332,7 +330,7 @@ async def _help(ctx, *, command: str = None):
         cog = bot.get_cog(command.replace(' ', '_').title())
         cmd = bot.get_command(command)
         em = discord.Embed(
-            title=f'{command} Help',
+            title=f'`{command}` Help',
             color=utils.random_color()
         )
         em.set_thumbnail(url=bot.user.avatar_url)
