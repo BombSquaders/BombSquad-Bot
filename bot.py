@@ -141,7 +141,7 @@ async def on_ready():
           f"ID: {bot.user.id}\n")
 
     if bot.dbl_token is not None:  # If our bot is listed on DBL and we have the token then initiate DBL client
-        bot.dbl_client = dbl.DBLClient(bot, bot.dbl_token)
+        bot.dbl_client = dbl.DBLClient(bot, bot.dbl_token, webhook_port=5000)
 
     print("Ready for use.")
 
