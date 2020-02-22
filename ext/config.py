@@ -18,19 +18,26 @@ class Config:
             f.close()
         self.bot.bssounds = os.listdir(os.path.join(self.bot.basedir, "bssounds/"))
 
-    async def get_guild_config(self, gid: str):
+    async def get_guild_config(self, gid: str) -> dict:
         """To find the config data of a guild."""
-        return {"prefix": str(await self.get_prefix(gid)),
-                "add_time": str(await self.get_guild_add_time(gid)),
-                "bstats": await self.get_bstats(gid)}
+        rows: list = await utils.mysql_get(self.bot, gid)
+        row: tuple = rows[0]
+        time = row[2]
 
-    async def get_prefix(self, gid):
+        if isinstance(time, datetime.datetime):
+            time = time.strftime('%Y-%m-%d %H:%M:%S')
+
+        return {"prefix": str(row[1]),
+                "add_time": time,
+                "bstats": json.loads(row[3])}
+
+    async def get_prefix(self, gid) -> str:
         """To get prefix for a guild."""
         rows: list = await utils.mysql_get(self.bot, gid)
         prefix = rows[0][1]
         return prefix
 
-    async def get_guild_add_time(self, gid):
+    async def get_guild_add_time(self, gid) -> str:
         """To get the time bot was added in this guild."""
         rows: list = await utils.mysql_get(self.bot, gid)
         time = rows[0][2]
@@ -38,7 +45,7 @@ class Config:
             time = time.strftime('%Y-%m-%d %H:%M:%S')
         return time
 
-    async def get_bstats(self, gid):
+    async def get_bstats(self, gid) -> dict:
         """To get BombSquad stats configuration of a guild."""
         rows: list = await utils.mysql_get(self.bot, gid)
         return json.loads(str(rows[0][3]))

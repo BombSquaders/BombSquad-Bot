@@ -42,7 +42,7 @@ def cleanup_code(content):
     return content.strip('` \n')
 
 
-def random_color():
+def random_color() -> discord.Colour:
     """Provides a random discord.Color value"""
     color = ('#%06x' % random.randint(8, 0xFFFFFF))
     color = int(color[1:], 16)
@@ -50,7 +50,7 @@ def random_color():
     return color
 
 
-async def mysql_get(bot, server_id: str):
+async def mysql_get(bot, server_id: str) -> list:
     """Get data from a table in the bot's MySQL database"""
 
     async def to_run():
