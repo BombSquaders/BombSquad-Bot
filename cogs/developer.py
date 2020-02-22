@@ -14,6 +14,8 @@ class Developer(commands.Cog):
     """Useful and utility commands."""
 
     def __init__(self, bot):
+        self.hidden = True
+        self.last_result = None
         self.bot = bot
         self.extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.py')]
 
@@ -90,11 +92,12 @@ class Developer(commands.Cog):
         """Evaluates python code (MUST ONLY BE ACCESSED BY THE OWNER)"""
         env = {
             'ctx': ctx,
+            'bot': self.bot,
             'channel': ctx.channel,
             'author': ctx.author,
             'guild': ctx.guild,
             'message': ctx.message,
-            '_': self.bot.last_result,
+            '_': self.last_result,
             'source': inspect.getsource
         }
 

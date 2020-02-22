@@ -87,7 +87,6 @@ bot.dbl_user_votes = {}  # For caching the users who upvote the bot
 bot.announcement = None
 bot.config = None
 bot.dbl_client = None
-bot.last_result = None
 
 
 @bot.event
@@ -103,11 +102,11 @@ async def on_connect():
     for extension in ex:  # Unload any loaded extension
         bot.unload_extension(extension)
 
-    for e in extensions:  # Load available extensions
-        bot.load_extension("cogs." + e)
-
     bot.basedir = os.getcwd()
     bot.config = config.Config(bot)
+
+    for e in extensions:  # Load available extensions
+        bot.load_extension("cogs." + e)
 
     bot.MySQLConnection = mysql.connector.connect(host='localhost',
                                                   database=os.environ.get("mysql_database"),
@@ -251,7 +250,7 @@ async def on_guild_remove(g):
         await bot.dbl_client.post_guild_count()
 
 
-async def send_cmd_help(ctx):
+async def send_cmd_help(ctx) -> discord.Embed:
     cmd = ctx.command
     p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
     pre = await bot.config.get_prefix(ctx.guild.id)
@@ -260,7 +259,7 @@ async def send_cmd_help(ctx):
     return em
 
 
-def format_cog_help(cog, em):
+def format_cog_help(cog, em) -> discord.Embed:
     """Format help for a cog"""
     cog_commands = bot.get_cog(cog).get_commands()
     commands_list = ''
@@ -279,13 +278,13 @@ def format_cog_help(cog, em):
     return em
 
 
-async def format_command_help(ctx, cmd, em):
+async def format_command_help(ctx, cmd, em) -> discord.Embed:
     """Format help for a command"""
 
     pre = await bot.config.get_prefix(ctx.guild.id)
     p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
 
-    if hasattr(cmd, 'invoke_without_command') and cmd.invoke_without_command:
+    if getattr(cmd, 'invoke_without_command', False):
         c = f'`{pre + p + cmd.name} {cmd.signature} <sub-command> [args]`'
     else:
         c = f'`{pre + p + cmd.name} {cmd.signature}`'
@@ -296,7 +295,7 @@ async def format_command_help(ctx, cmd, em):
     return em
 
 
-async def format_bot_help(ctx):
+async def format_bot_help(ctx) -> discord.Embed:
     signatures = []
     fmt = ''
     bot_commands = []
@@ -338,12 +337,14 @@ async def _help(ctx, *, command: str = None):
             text=f'Type `{pre}help <command>` for more info on a command.',
             icon_url=bot.user.avatar_url
         )
-        if cog is not None:
+
+        if cog is not None and not getattr(cog, "hidden", False):
             em = format_cog_help(command.replace(' ', '_').title(), em)
         elif cmd is not None:
             em = await format_command_help(ctx, cmd, em)
         else:
             return await ctx.send('No commands or cog found which satisfies the name you gave.')
+
         return await ctx.send(embed=em)
 
     pages.append(await format_bot_help(ctx))
@@ -355,7 +356,7 @@ async def _help(ctx, *, command: str = None):
         )
         em.set_thumbnail(url=bot.user.avatar_url)
         em = format_cog_help(cog, em)
-        if not cog == "Developer":
+        if not getattr(bot.cogs[cog], "hidden", False):
             pages.append(em)
 
     p_session = PaginatorSession(ctx, footer=f'Type `{pre}help <command>` for more info on a command.',
