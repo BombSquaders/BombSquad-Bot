@@ -3,6 +3,7 @@ discord.py[voice]
 aiohttp>=3.6.2
 asyncio>=3.4.3
 pytz>=2019.3
+Pillow>=7.0.0
 wikipedia>=1.4.0
 mysql-connector-python>=8.0.19
 git+https://github.com/DiscordBotList/DBL-Python-Library@master
