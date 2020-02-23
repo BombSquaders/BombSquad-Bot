@@ -8,6 +8,9 @@ import textwrap
 import traceback
 import inspect
 from ext import utils
+import mysql.connector
+import datetime
+import json
 
 
 class Developer(commands.Cog):
@@ -18,6 +21,36 @@ class Developer(commands.Cog):
         self.last_result = None
         self.bot = bot
         self.extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.py')]
+
+    async def get_user_data(self, user: discord.Member) -> tuple:
+        """To retrieve the current data of a user."""
+
+        async def to_run() -> tuple:
+            self.bot.MySQLConnection.cmd_refresh(1)
+            self.bot.MySQLCursor.execute(f"SELECT * FROM `users` WHERE id={user.id};")
+            new = (user.id, 0, 0, {}, None, None)
+            rows = self.bot.MySQLCursor.fetchall()
+
+            if len(rows) == 0:
+                # Create an entry for the player if there is None yet
+                await utils.mysql_set(bot=self.bot, id=user.id, arg1="players", arg2="new")
+                return new  # Rerun the process of retrieving
+
+            row = rows[0]
+            custom_bg = row[4] or "default.png"
+            dead = None if row[5] is None else datetime.datetime.strptime(row[5], '%Y-%m-%d %H:%M:%S')
+            data = (int(row[0]), int(row[1]), int(row[2]), json.loads(str(row[3])), custom_bg, dead)
+            return data  # Return the retrieved data if everything is fine
+
+        try:
+            return await to_run()
+        except mysql.connector.errors.ProgrammingError:
+            self.bot.MySQLConnection = mysql.connector.connect(host='localhost',
+                                                               database=os.environ.get("mysql_database"),
+                                                               user=os.environ.get("mysql_user"),
+                                                               password=os.environ.get("mysql_password"))
+            self.bot.MySQLCursor = self.bot.MySQLConnection.cursor()
+            return await to_run()
 
     @commands.command(name='presence', hidden=True)
     @utils.developer()
@@ -84,6 +117,69 @@ class Developer(commands.Cog):
         """Tells everyone an announcement in the bot info command."""
         self.bot.announcement = None if str(message).lower() in ("reset", "clear", "none") else message
         await ctx.send('Announcement successfully set.')
+
+    @commands.command(hidden=True)
+    @utils.developer()
+    async def grant(self, ctx, user: discord.User, item: str, amount: int):
+        """To grant a discord user a certain amount of an item."""
+
+        # The valid grant items
+        t = "tickets"
+        n_bombs = "bombs"
+        i_bombs = "ice_bombs"
+        s_bombs = "sticky_bombs"
+        gloves = "boxing_gloves"
+
+        # Get the current data of the user
+        data = await self.get_user_data(user)
+
+        if item in (i_bombs, s_bombs):
+            powers: dict = {}  # A dict to store the latest powerup data in
+            now = datetime.datetime.utcnow()
+            for key in data[3].keys():
+                k_item = data[3][key]
+                if not datetime.datetime.strptime(k_item["expires"], '%Y-%m-%d %H:%M:%S') <= now:
+                    if str(key) == item:
+                        expire = now + datetime.timedelta(days=2)
+                        k_item["count"] = int(int(k_item["count"]) + amount)
+                        k_item["expires"] = f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"
+                    powers[key] = k_item
+
+            # Make sure the powerup is in the dict
+            if item not in powers.keys():
+                value = {}
+                expire = now + datetime.timedelta(days=2, hours=12)
+                value["count"] = int(amount)
+                value["expires"] = f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"
+                powers[item] = value
+
+            # At last, deduct the tickets and increment the granted item
+            await utils.mysql_set(self.bot, user.id, arg1="players", arg2="powers", arg3=f"'{str(json.dumps(powers))}'")
+        elif item == gloves:
+            powers: dict = {}  # A dict to store the latest powerup data in
+            now = datetime.datetime.utcnow()
+            for key in data[3].keys():
+                value = data[3][key]
+                if not datetime.datetime.strptime(value["expires"], '%Y-%m-%d %H:%M:%S') <= now:
+                    powers[key] = value
+
+            # Now add the gloves
+            expire = now + datetime.timedelta(days=2, hours=12)
+            powers[gloves] = {"count": 1, "expires": f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"}
+
+            # At last, deduct the tickets and increment the granted item
+            await utils.mysql_set(self.bot, user.id, arg1="players", arg2="powers", arg3=f"'{str(json.dumps(powers))}'")
+        elif item == n_bombs:
+            await utils.mysql_set(self.bot, user.id, arg1="players", arg2="bombs",
+                                  arg3=f"{str(int(data[2]) + amount)}")
+        elif item == t:
+            await utils.mysql_set(self.bot, user.id, arg1="players", arg2="tickets",
+                                  arg3=f"{str(int(data[1]) + amount)}")
+        else:
+            return await ctx.send(f"Unknown item {item}")
+
+        # Success message
+        await ctx.send(f"Successfully granted {amount} {item} to {user.name}.")
 
     # noinspection PyUnusedLocal
     @commands.command(name='py_val', hidden=True)
