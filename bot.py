@@ -183,7 +183,8 @@ async def on_command_error(ctx, error):
         await ctx.send(embed=help_message)
 
     elif isinstance(error, commands.CommandOnCooldown):
-        await ctx.send(f'This command is on cooldown. Please wait {error.retry_after:.2f}s')
+        await ctx.send(
+            f'This command is on `{error.cooldown.type}` type cooldown. Please wait {error.retry_after:.2f}s')
 
     elif isinstance(error, commands.MissingPermissions):
         em = discord.Embed(title="Lacking permission",
