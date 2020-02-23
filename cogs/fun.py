@@ -9,7 +9,7 @@ import json
 from ext import utils
 
 
-class Misc(commands.Cog):
+class Fun(commands.Cog):
     """Bot fun commands."""
 
     def __init__(self, bot):
@@ -201,4 +201,4 @@ class Misc(commands.Cog):
 
 
 def setup(bot):
-    bot.add_cog(Misc(bot))
+    bot.add_cog(Fun(bot))
