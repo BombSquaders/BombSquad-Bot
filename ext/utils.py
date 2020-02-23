@@ -105,6 +105,14 @@ async def mysql_set(bot, id: str, arg1: str = None, arg2: str = None, arg3: str 
             elif arg1 == "fan_arts":
                 bot.MySQLCursor.execute(
                     f"INSERT INTO `fan_arts` (`username`, `img_url`, `send_time`) VALUES ('{id}', '{arg2}', '{arg3}');")
+            elif arg1 == "players":
+                if arg2 == "new":
+                    bot.MySQLCursor.execute(
+                        "INSERT INTO `users` (`id`, `tickets`, `bombs`, `powers`, `custom_bg`, `dead`) VALUES "
+                        f"('{id}', 50, 1, '{{}}', NULL, NULL);")
+                else:
+                    bot.MySQLCursor.execute(
+                        f"UPDATE `users` SET {arg2}={arg3} WHERE id={id};")
         bot.MySQLConnection.commit()
 
     try:

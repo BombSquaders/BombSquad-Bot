@@ -4,9 +4,10 @@ import dbl
 from ext import utils, config
 from ext.paginator import PaginatorSession
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 import os
+import json
 from threading import Thread
 import sys
 import mysql.connector
@@ -22,6 +23,36 @@ async def prefix(d_client, message):
     return commands.when_mentioned_or(await d_client.config.get_prefix(message.guild.id))(d_client, message)
     # Comment the above line and use just 'return await d_client.config.get_prefix(message.guild.id)' if you do not want
     # the bot to respond to commands with bot mention as prefix
+
+
+async def get_user_data(user: discord.User) -> tuple:
+    """To retrieve the current data of a user."""
+
+    async def to_run() -> tuple:
+        bot.MySQLConnection.cmd_refresh(1)
+        bot.MySQLCursor.execute(f"SELECT * FROM `users` WHERE id={user.id};")
+        new = (user.id, 0, 0, {}, None, None)
+        rows = bot.MySQLCursor.fetchall()
+
+        if len(rows) == 0:
+            # Create an entry for the player if there is None yet
+            await utils.mysql_set(bot=bot, id=user.id, arg1="players", arg2="new")
+            return new  # Rerun the process of retrieving
+
+        row = rows[0]
+        custom_bg = row[4] or "default.png"
+        data = (int(row[0]), int(row[1]), int(row[2]), json.loads(str(row[3])), custom_bg, row[5])
+        return data  # Return the retrieved data if everything is fine
+
+    try:
+        return await to_run()
+    except mysql.connector.errors.ProgrammingError:
+        bot.MySQLConnection = mysql.connector.connect(host='localhost',
+                                                      database=os.environ.get("mysql_database"),
+                                                      user=os.environ.get("mysql_user"),
+                                                      password=os.environ.get("mysql_password"))
+        bot.MySQLCursor = bot.MySQLConnection.cursor()
+        return await to_run()
 
 
 # A Thread to get the commands input from the terminal after running the bot
@@ -82,6 +113,7 @@ bot.creator = BotCreator()  # Set the Bot Creator attribute
 dt = str(os.environ.get("bot_dbl_token", None))
 bot.dbl_token = dt if dt != "None" else None  # The Discord Bot List token
 bot.dbl_user_votes = {}  # For caching the users who upvote the bot
+bot.recent_tickets = {}  # For granting tickets on messaging every 1 minute
 
 # Now setting some custom attributes for our bot for later use
 bot.announcement = None
@@ -207,16 +239,23 @@ async def on_command_error(ctx, error):
 
 
 @bot.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     if not bot.is_ready() or message.author.bot or isinstance(message.channel, discord.DMChannel) or isinstance(
             message.channel, discord.GroupChannel):
         return
+
+    now = datetime.utcnow()
+    td = timedelta(minutes=1.5)
+    if not bot.recent_tickets.get(str(message.author.id), now - td) > now - td:
+        # Check if the ticket to this user was last granted 1 minutes ago
+        data = await get_user_data(message.author)
+        await utils.mysql_set(bot, message.author.id, arg1="players", arg2="tickets", arg3=int(data[1]) + 1)
 
     await bot.process_commands(message)
 
 
 @bot.event
-async def on_guild_join(g):
+async def on_guild_join(g: discord.Guild):
     await bot.config.update(str(g.id), "guild", "join")
     success = False
     i = 0
@@ -243,7 +282,7 @@ async def on_guild_join(g):
 
 
 @bot.event
-async def on_guild_remove(g):
+async def on_guild_remove(g: discord.Guild):
     await bot.config.update(str(g.id), "guild", "remove")
     await bot.change_presence(activity=discord.Game(f"in {len(bot.guilds)} servers | {bot.default_prefix}help"),
                               afk=True)
@@ -261,7 +300,7 @@ async def send_cmd_help(ctx) -> discord.Embed:
     return em
 
 
-def format_cog_help(cog, em) -> discord.Embed:
+def format_cog_help(cog, em: discord.Embed) -> discord.Embed:
     """Format help for a cog"""
     cog_commands = bot.get_cog(cog).get_commands()
     commands_list = ''
@@ -280,7 +319,7 @@ def format_cog_help(cog, em) -> discord.Embed:
     return em
 
 
-async def format_command_help(ctx, cmd, em) -> discord.Embed:
+async def format_command_help(ctx, cmd, em: discord.Embed) -> discord.Embed:
     """Format help for a command"""
 
     pre = await bot.config.get_prefix(ctx.guild.id)
