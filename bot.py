@@ -208,7 +208,8 @@ async def on_command_error(ctx, error):
 
 @bot.event
 async def on_message(message):
-    if not bot.is_ready() or message.author.bot:
+    if not bot.is_ready() or message.author.bot or isinstance(message.channel, discord.DMChannel) or isinstance(
+            message.channel, discord.GroupChannel):
         return
 
     await bot.process_commands(message)
