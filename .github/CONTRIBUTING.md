@@ -1,7 +1,7 @@
 # Contributing
 
 Having trouble working with the server files? Found a typo in the documentation? 
-Interested in adding a feature or [fixing a bug](https://github.com/I-Am-The-Great/BombSquad-Server/issues)? 
+Interested in adding a feature or add more interesting entries to `data/*.json` or fixing a bug? 
 Then by all means [submit an issue](https://github.com/I-Am-The-Great/BombSquad-Server/issues/new) 
 or [pull request](https://help.github.com/articles/using-pull-requests/). 
 If this is your first pull request, it may be helpful to read up on the 
