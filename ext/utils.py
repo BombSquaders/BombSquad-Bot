@@ -7,6 +7,17 @@ import mysql.connector
 import os
 
 
+def test_channel():
+    def wrapper(ctx):
+        with open('data/test-channels.json') as f:
+            channels = json.load(f)
+        if ctx.channel.id in channels:
+            return True
+        raise commands.MissingPermissions('You cannot use this command outside the test channel.')
+
+    return commands.check(wrapper)
+
+
 def developer():
     def wrapper(ctx):
         with open('data/devs.json') as f:
