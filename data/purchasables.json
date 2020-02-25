@@ -1,0 +1,22 @@
+{
+  "bombs": {
+    "description": "normal bombs never expire costs 10 tickets for one and damage 17.50 hp",
+    "cost": 10
+  },
+  "ice_bombs": {
+    "description": "costs 15 tickets for one, do 0.25% less damage than normal bombs but have a chance to freeze opponent",
+    "cost":  15
+  },
+  "sticky_bombs": {
+    "description": "costs 15 tickets for one, stick when touch anywhere and do normal bomb damage",
+    "cost":  15
+  },
+  "auto_aim_bombs": {
+    "description": "costs 25 tickets for one, automatically aims to the target",
+    "cost":  25
+  },
+  "boxing_gloves": {
+    "description": "costs 20 tickets for one, only one can be used at a time, adds 50% more damage to punches",
+    "cost":  20
+  }
+}

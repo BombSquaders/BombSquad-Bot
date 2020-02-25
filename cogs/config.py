@@ -8,7 +8,7 @@ import json
 
 
 class Config(commands.Cog):
-    """Customize your server with these config commands."""
+    """Customize your server with these configuration commands."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -33,6 +33,34 @@ class Config(commands.Cog):
         await ctx.send(
             f'The guild prefix has been set to `{pre}` from `{result}`.\n'
             f'Use `{pre}prefix <prefix>` to change it again.')
+
+    @commands.command(aliases=["spawn_channel", "enemy_spawn"])
+    @commands.has_permissions(manage_guild=True)
+    async def enemy_spawn_channel(self, ctx, ch: discord.TextChannel = None):
+        """Set the channel for this guild where to spawn enemies, or use it without any arguments to disable."""
+        if ch is None:  # Disable the enemy spawns if no channel provided
+            await self.bot.config.update(str(ctx.guild.id), "spawn_channel", "NULL")
+            return await ctx.send("Disabled enemy spawns in this discord server.")
+
+        # Else set the enemy spawns channel
+        await self.bot.config.update(str(ctx.guild.id), "spawn_channel", str(ch.id))
+
+        # Send confirmation
+        await ctx.send(f'The server\'s spawns channel has been successfully set to `{ch.mention}`')
+
+    @commands.command()
+    @commands.has_permissions(manage_guild=True)
+    async def random_events(self, ctx, allow: str = "no"):
+        """Set if random events are to be allowed or disabled in this discord server."""
+        if allow.lower() in ("no", "n", "disable", "disallow", "false"):
+            await self.bot.config.update(str(ctx.guild.id), "random_events", "0")
+            return await ctx.send("Disabled random events in this discord server.")
+
+        # Else set the enemy spawns channel
+        await self.bot.config.update(str(ctx.guild.id), "random_events", "1")
+
+        # Send confirmation
+        await ctx.send(f'Random events are now allowed in this server.')
 
     @commands.group(invoke_without_command=True, aliases=["bs", "bs_server", "bs_stats"])
     async def bs_server_stats(self, ctx):

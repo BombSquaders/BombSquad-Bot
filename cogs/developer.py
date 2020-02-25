@@ -8,7 +8,7 @@ import textwrap
 import traceback
 import inspect
 from ext import utils
-import mysql.connector
+from ext.utils import get_user_data
 import datetime
 import json
 
@@ -21,36 +21,6 @@ class Developer(commands.Cog):
         self.last_result = None
         self.bot = bot
         self.extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.py')]
-
-    async def get_user_data(self, user: discord.Member) -> tuple:
-        """To retrieve the current data of a user."""
-
-        async def to_run() -> tuple:
-            self.bot.MySQLConnection.cmd_refresh(1)
-            self.bot.MySQLCursor.execute(f"SELECT * FROM `users` WHERE id={user.id};")
-            new = (user.id, 0, 0, {}, None, None)
-            rows = self.bot.MySQLCursor.fetchall()
-
-            if len(rows) == 0:
-                # Create an entry for the player if there is None yet
-                await utils.mysql_set(bot=self.bot, id=user.id, arg1="players", arg2="new")
-                return new  # Rerun the process of retrieving
-
-            row = rows[0]
-            custom_bg = row[4] or "default.png"
-            dead = None if row[5] is None else datetime.datetime.strptime(row[5], '%Y-%m-%d %H:%M:%S')
-            data = (int(row[0]), int(row[1]), int(row[2]), json.loads(str(row[3])), custom_bg, dead)
-            return data  # Return the retrieved data if everything is fine
-
-        try:
-            return await to_run()
-        except mysql.connector.errors.ProgrammingError:
-            self.bot.MySQLConnection = mysql.connector.connect(host='localhost',
-                                                               database=os.environ.get("mysql_database"),
-                                                               user=os.environ.get("mysql_user"),
-                                                               password=os.environ.get("mysql_password"))
-            self.bot.MySQLCursor = self.bot.MySQLConnection.cursor()
-            return await to_run()
 
     @commands.command(name='presence', hidden=True)
     @utils.developer()
@@ -126,14 +96,12 @@ class Developer(commands.Cog):
         # The valid grant items
         t = "tickets"
         n_bombs = "bombs"
-        i_bombs = "ice_bombs"
-        s_bombs = "sticky_bombs"
         gloves = "boxing_gloves"
 
         # Get the current data of the user
-        data = await self.get_user_data(user)
+        data = await get_user_data(self.bot, user)
 
-        if item in (i_bombs, s_bombs):
+        if item in [x for x in self.bot.purchasables.keys() if str(x) != gloves and str(x) != n_bombs]:
             powers: dict = {}  # A dict to store the latest powerup data in
             now = datetime.datetime.utcnow()
             for key in data[3].keys():

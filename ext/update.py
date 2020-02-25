@@ -13,6 +13,10 @@ class Update:
     async def run(self):
         if self.option == "prefix":
             await self.prefix()
+        elif self.option == "enemy_spawns":
+            await self.enemy_spawns()
+        elif self.option == "random_events":
+            await self.random_events()
         elif self.option == "BSStats":
             await self.bs_stats()
         elif self.option == "guild":
@@ -27,6 +31,14 @@ class Update:
     async def prefix(self):
         """Used to update the bot's prefix of a guild."""
         await utils.mysql_set(self.bot, self.gid, arg1="prefix", arg2=self.value)
+
+    async def enemy_spawns(self):
+        """Used to update the enemy spawns channel of a guild."""
+        await utils.mysql_set(self.bot, self.gid, arg1="spawn_channel", arg2=self.value)
+
+    async def random_events(self):
+        """Used to update the random events allowance of a guild."""
+        await utils.mysql_set(self.bot, self.gid, arg1="random_events", arg2=self.value)
 
     async def bs_stats(self):
         """Used to update the bot's BS stats configuration of a guild."""

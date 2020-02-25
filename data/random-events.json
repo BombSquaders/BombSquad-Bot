@@ -1,0 +1,73 @@
+{
+  "common": {
+    "1": {
+      "description": "A mad boxer Kronk is roaming out freely in BombCity",
+      "value": "Send `bomb the box` to stop the Kronk without a fight will win 2 normal bombs",
+      "wait_for": "message",
+      "answer": "bomb the box",
+      "grant": {"name": "bombs", "amount":  2}
+    },
+    "2": {
+      "description": "A Spaz is driving a bike breaking all speed limits on BombHighway",
+      "value": "Send `punch the brake` to stop the bike will win a boxing glove",
+      "wait_for": "message",
+      "answer": "punch the brake",
+      "grant": {"name": "boxing_gloves", "amount":  1}
+    },
+    "3": {
+      "description": "B-9000 is doing a bank robbery at BombBank, no one can get near him",
+      "value": "React with <:AutoAimBomb:681141263033958423> to blast bomb on the B-9000 will win a auto aim bomb",
+      "wait_for": "reaction_add",
+      "answer": "<:AutoAimBomb:681141263033958423>",
+      "grant": {"name": "auto_aim_bombs", "amount":  1}
+    }
+  },
+  "rare": {
+    "1": {
+      "description": "A mad chef Mel has escaped from BombRestaurant",
+      "value": "Send `catch mel` will win 2 sticky bombs",
+      "wait_for": "message",
+      "answer": "catch mel",
+      "grant": {"name": "sticky_bombs", "amount":  2}
+    },
+    "2": {
+      "description": "The Terminator has been activated and is on the way to destroy BombCity",
+      "value": "React with <:AutoAimBomb:681141263033958423> to destroy The Terminator using auto aim will win 2 auto aim bombs",
+      "wait_for": "reaction_add",
+      "answer": "<:AutoAimBomb:681141263033958423>",
+      "grant": {"name": "auto_aim_bombs", "amount":  2}
+    },
+    "3": {
+      "description": "A Bunny is continuously hopping with very much power in BombCity causing EarthQuakes",
+      "value": "Send `bunny fall` to stop the hopping bunny will get 3 tickets",
+      "wait_for": "message",
+      "answer": "bunny fall",
+      "grant": {"name": "tickets", "amount":  3}
+    }
+  },
+  "epic": {
+    "1": {
+      "description": "A bomb has exploded in BombCity and everywhere is fire",
+      "value": "React to this message with <:IceBomb:680740264138113025> will help to set off the fire will win 3 ice bombs",
+      "wait_for": "reaction_add",
+      "answer": "<:IceBomb:680740264138113025>",
+      "grant": {"name": "ice_bombs", "amount":  3}
+    },
+    "2": {
+      "description": "The BombReactor in BombCity is out of control and emitting BombRadiations",
+      "value": "Help the scientists absorb the radiations in Bomb by reacting to this message with <:NuclearAbsorber:681744728282497029> will be awarded 5 tickets by the city's government",
+      "wait_for": "reaction_add",
+      "answer": "<:NuclearAbsorber:681744728282497029>",
+      "grant": {"name": "tickets", "amount":  5}
+    }
+  },
+  "legendary": {
+    "1": {
+      "description": "A pixel has lost her wings",
+      "value": "React with <:wings:681141199259828235> and help the pixel will be given 25 tickets by Grumbledorf",
+      "wait_for": "reaction_add",
+      "answer": "<:wings:681141199259828235>",
+      "grant": {"name": "tickets", "amount":  25}
+    }
+  }
+}

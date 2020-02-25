@@ -2,12 +2,12 @@ import discord
 from discord.ext import commands
 import dbl
 from ext import utils, config
+from ext.utils import get_user_data
 from ext.paginator import PaginatorSession
 import traceback
 from datetime import datetime, timedelta
 import asyncio
 import os
-import json
 from threading import Thread
 import sys
 import mysql.connector
@@ -23,36 +23,6 @@ async def prefix(d_client, message):
     return commands.when_mentioned_or(await d_client.config.get_prefix(message.guild.id))(d_client, message)
     # Comment the above line and use just 'return await d_client.config.get_prefix(message.guild.id)' if you do not want
     # the bot to respond to commands with bot mention as prefix
-
-
-async def get_user_data(user: discord.User) -> tuple:
-    """To retrieve the current data of a user."""
-
-    async def to_run() -> tuple:
-        bot.MySQLConnection.cmd_refresh(1)
-        bot.MySQLCursor.execute(f"SELECT * FROM `users` WHERE id={user.id};")
-        new = (user.id, 0, 0, {}, None, None)
-        rows = bot.MySQLCursor.fetchall()
-
-        if len(rows) == 0:
-            # Create an entry for the player if there is None yet
-            await utils.mysql_set(bot=bot, id=user.id, arg1="players", arg2="new")
-            return new  # Rerun the process of retrieving
-
-        row = rows[0]
-        custom_bg = row[4] or "default.png"
-        data = (int(row[0]), int(row[1]), int(row[2]), json.loads(str(row[3])), custom_bg, row[5])
-        return data  # Return the retrieved data if everything is fine
-
-    try:
-        return await to_run()
-    except mysql.connector.errors.ProgrammingError:
-        bot.MySQLConnection = mysql.connector.connect(host='localhost',
-                                                      database=os.environ.get("mysql_database"),
-                                                      user=os.environ.get("mysql_user"),
-                                                      password=os.environ.get("mysql_password"))
-        bot.MySQLCursor = bot.MySQLConnection.cursor()
-        return await to_run()
 
 
 # A Thread to get the commands input from the terminal after running the bot
@@ -119,6 +89,7 @@ bot.recent_tickets = {}  # For granting tickets on messaging every 1 minute
 bot.announcement = None
 bot.config = None
 bot.dbl_client = None
+tt = timedelta(minutes=2)
 
 
 @bot.event
@@ -163,7 +134,7 @@ async def on_disconnect():
 
 @bot.event
 async def on_ready():
-    global inpt
+    global inpt, t
 
     await bot.change_presence(status=discord.Status.offline)  # Change to offline when loading
     print(f"Logged in.\n"
@@ -245,11 +216,11 @@ async def on_message(message: discord.Message):
         return
 
     now = datetime.utcnow()
-    td = timedelta(minutes=1.5)
-    if not bot.recent_tickets.get(str(message.author.id), now - td) > now - td:
-        # Check if the ticket to this user was last granted 1 minutes ago
-        data = await get_user_data(message.author)
+    if not bot.recent_tickets.get(str(message.author.id), now - tt) > now - tt:
+        # Check if the ticket to this user was last granted 2 minutes ago
+        data = await get_user_data(bot, message.author)
         await utils.mysql_set(bot, message.author.id, arg1="players", arg2="tickets", arg3=int(data[1]) + 1)
+        bot.recent_tickets[str(message.author.id)] = now
 
     await bot.process_commands(message)
 

@@ -16,6 +16,12 @@ class Config:
         with open(os.path.join(bot.basedir, "data/trivias.json")) as f:
             self.bot.trivias = json.loads(f.read())
             f.close()
+        with open(os.path.join(bot.basedir, "data/random-events.json")) as f:
+            self.bot.r_events = json.loads(f.read())
+            f.close()
+        with open(os.path.join(bot.basedir, "data/purchasables.json")) as f:
+            self.bot.purchasables = json.loads(f.read())
+            f.close()
         self.bot.bssounds = os.listdir(os.path.join(self.bot.basedir, "bssounds/"))
 
     async def get_guild_config(self, gid: str) -> dict:
@@ -29,7 +35,9 @@ class Config:
 
         return {"prefix": str(row[1]),
                 "add_time": time,
-                "bstats": json.loads(row[3])}
+                "bstats": json.loads(row[3]),
+                "spawn_channels": int(row[4]),
+                "random_events": int(row[5]) == 1}
 
     async def get_prefix(self, gid) -> str:
         """To get prefix for a guild."""
@@ -49,6 +57,16 @@ class Config:
         """To get BombSquad stats configuration of a guild."""
         rows: list = await utils.mysql_get(self.bot, gid)
         return json.loads(str(rows[0][3]))
+
+    async def get_spawn_channel(self, gid) -> int:
+        """To get BombSquad stats configuration of a guild."""
+        rows: list = await utils.mysql_get(self.bot, gid)
+        return int(rows[0][4])
+
+    async def get_random_events(self, gid) -> bool:
+        """To get BombSquad stats configuration of a guild."""
+        rows: list = await utils.mysql_get(self.bot, gid)
+        return int(rows[0][5]) == 1
 
     async def update(self, gid: str, option, value):
         """Used to update config settings of a guild."""

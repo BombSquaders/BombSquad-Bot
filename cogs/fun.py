@@ -185,6 +185,7 @@ class Fun(commands.Cog):
         # Wait for answer and return on timeout
         def check(m):
             return m.author == ctx.author and m.channel == ctx.message.channel
+
         try:
             reply = await self.bot.wait_for('message', check=check, timeout=15.0)
         except asyncio.TimeoutError:
@@ -193,6 +194,10 @@ class Fun(commands.Cog):
         # Check the answer
         if str(reply.content) in answers:
             await ctx.send("Congratulations! You won the trivia.")
+            data = await utils.get_user_data(self.bot, ctx.author)
+            await utils.mysql_set(self.bot, ctx.author.id, arg1="players", arg2="tickets",
+                                  arg3=f"{str(int(data[1]) + 1)}")
+            await ctx.send("You are awarded 1 ticket for winning the trivia.")
         else:
 
             await ctx.send("Unfortunately, you lost the trivia.\n"
