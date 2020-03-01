@@ -95,27 +95,6 @@ class Fun(commands.Cog):
     async def randomcomic(self, ctx):
         """Get a comic from xkcd."""
 
-        # Example of a command that needs upvote
-        if self.bot.dbl_client is not None:
-
-            # First check if the user is in bot's vote cache
-            u = self.bot.dbl_user_votes.get(str(ctx.author.id), {})
-            voted = u.get("voted", None)
-            cache_time = u.get("cache_time")
-
-            # If not or if it is for longer than 15 minutes then retrieve a fresh vote data of the user
-            if voted is None and cache_time - datetime.datetime.utcnow() > datetime.timedelta(minutes=15):
-                voted = await self.bot.dbl_client.get_user_vote(ctx.author.id)
-
-                # And save it to the cache
-                self.bot.dbl_user_votes[str(ctx.author.id)]["voted"] = voted
-                self.bot.dbl_user_votes[str(ctx.author.id)]["cache_time"] = datetime.datetime.utcnow()
-        else:
-            voted = True
-        if not voted:
-            await ctx.send(f"You need to upvote on my DBL page to use this command ({ctx.command.prefix}upvote).")
-            return await ctx.send("Wait for 15 seconds after voting to use this command.")
-
         # Get the number of comics available and choose one from them
         async with aiohttp.ClientSession() as session:
             async with session.get(f'http://xkcd.com/info.0.json') as resp:
@@ -194,9 +173,12 @@ class Fun(commands.Cog):
         # Check the answer
         if str(reply.content) in answers:
             await ctx.send("Congratulations! You won the trivia.")
-            data = await utils.get_user_data(self.bot, ctx.author)
-            await utils.mysql_set(self.bot, ctx.author.id, arg1="players", arg2="tickets",
-                                  arg3=f"{str(int(data[1]) + 1)}")
+
+            # Example of a process that needs upvote
+            if not await utils.get_user_vote(self.bot, ctx.author.id):
+                return await ctx.send(f"You need to upvote on my DBL page to get 1 ticket after winning every trivia.")
+
+            await utils.increment_ticket(self.bot, ctx.author.id)
             await ctx.send("You are awarded 1 ticket for winning the trivia.")
         else:
 

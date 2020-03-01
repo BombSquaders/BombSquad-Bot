@@ -7,18 +7,37 @@ import mysql.connector
 import os
 
 
-async def get_user_data(bot, user: discord.User) -> list:
+async def get_user_vote(bot, user: int) -> bool:
+    voted = False
+    if bot.dbl_client is not None:
+
+        # First check if the user is in bot's vote cache
+        ud = bot.dbl_user_votes.get(str(user), {})
+        voted = ud.get("voted", "undefined")
+        now = datetime.datetime.utcnow()
+        cache_time = ud.get("cache_time", now)
+
+        # If not or if it is for longer than 15 minutes then retrieve a fresh vote data of the user
+        if cache_time - now > datetime.timedelta(minutes=15) or voted == "undefined":
+            voted = await bot.dbl_client.get_user_vote(user)
+
+            # And save it to the cache
+            bot.dbl_user_votes[str(user)] = {"voted": voted, "cache_time": datetime.datetime.utcnow()}
+    return voted
+
+
+async def get_user_data(bot, user: int) -> list:
     """To retrieve the current data of a user."""
 
     async def to_run() -> list:
         bot.MySQLConnection.cmd_refresh(1)
-        bot.MySQLCursor.execute(f"SELECT * FROM `users` WHERE id={user.id};")
-        new = [user.id, 0, 0, {}, None, None]
+        bot.MySQLCursor.execute(f"SELECT * FROM `users` WHERE id={user};")
+        new = [user, 0, 0, {}, None, None]
         rows = bot.MySQLCursor.fetchall()
 
         if len(rows) == 0:
             # Create an entry for the player if there is None yet
-            await mysql_set(bot=bot, id=user.id, arg1="players", arg2="new")
+            await mysql_set(bot=bot, id=user, arg1="players", arg2="new")
             return new  # Rerun the process of retrieving
 
         row = rows[0]
@@ -35,6 +54,11 @@ async def get_user_data(bot, user: discord.User) -> list:
                                                       password=os.environ.get("mysql_password"))
         bot.MySQLCursor = bot.MySQLConnection.cursor()
         return await to_run()
+
+
+async def increment_ticket(bot, user: int):
+    d = await get_user_data(bot, user)
+    await mysql_set(bot, str(user), arg1="players", arg2="tickets", arg3=f"{int(d[1]) + 1}")
 
 
 def test_channel():

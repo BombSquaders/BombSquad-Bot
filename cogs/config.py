@@ -15,7 +15,6 @@ class Config(commands.Cog):
         self.bs_server_files = "https://www.github.com/I-Am-The-Great/BombSquad-Server/"
 
     @commands.command()
-    @commands.has_permissions(manage_guild=True)
     async def prefix(self, ctx, *, pre=None):
         """Set a custom prefix for the guild."""
 
@@ -25,6 +24,10 @@ class Config(commands.Cog):
         if pre is None:
             return await ctx.send(f"The current prefix in this guild is `{result}`.\n"
                                   f"To set new prefix use: `{result}prefix <new prefix>`.")  # Return prefix if asked
+
+        # Return if does not have manage servers permission
+        if not ctx.author.guild_permissions.manage_guild:
+            raise commands.MissingPermissions(missing_perms=[discord.Permissions.manage_guild])
 
         # Else set new prefix
         await self.bot.config.update(str(ctx.guild.id), "prefix", str(pre))

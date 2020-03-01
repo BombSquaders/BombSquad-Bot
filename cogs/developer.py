@@ -99,7 +99,7 @@ class Developer(commands.Cog):
         gloves = "boxing_gloves"
 
         # Get the current data of the user
-        data = await get_user_data(self.bot, user)
+        data = await get_user_data(self.bot, user.id)
 
         if item in [x for x in self.bot.purchasables.keys() if str(x) != gloves and str(x) != n_bombs]:
             powers: dict = {}  # A dict to store the latest powerup data in

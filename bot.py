@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import dbl
 from ext import utils, config
-from ext.utils import get_user_data
+from ext.utils import increment_ticket
 from ext.paginator import PaginatorSession
 import traceback
 from datetime import datetime, timedelta
@@ -153,8 +153,7 @@ async def on_ready():
     if bot.dbl_client is not None:  # If we have our DBL client then post the servers count and cache the bot upvotes
         await bot.dbl_client.post_guild_count()
         for u in await bot.dbl_client.get_bot_upvotes():
-            bot.dbl_user_votes[str(u.id)]["voted"] = True
-            bot.dbl_user_votes[str(u.id)]["cache_time"] = datetime.utcnow()
+            bot.dbl_user_votes[str(u["id"])] = {"voted": True, "cache_time": datetime.utcnow()}
 
     if not inpt:  # If we are not reading input from the terminal then start reading it
         inpt = True
@@ -163,10 +162,10 @@ async def on_ready():
 
 @bot.event
 async def on_dbl_vote(data):
-    if int(data["bot"]) == bot.user.id:
-        uid = data["user"]
-        bot.dbl_user_votes[str(uid)]["voted"] = True
-        bot.dbl_user_votes[str(uid)]["cache_time"] = datetime.utcnow()
+    uid = data["user"]
+    print("Vote received")
+    await increment_ticket(bot, uid)
+    bot.dbl_user_votes[str(uid)] = {"voted": True, "cache_time": datetime.utcnow()}
 
 
 @bot.event
@@ -218,8 +217,7 @@ async def on_message(message: discord.Message):
     now = datetime.utcnow()
     if not bot.recent_tickets.get(str(message.author.id), now - tt) > now - tt:
         # Check if the ticket to this user was last granted 2 minutes ago
-        data = await get_user_data(bot, message.author)
-        await utils.mysql_set(bot, message.author.id, arg1="players", arg2="tickets", arg3=int(data[1]) + 1)
+        await increment_ticket(bot, message.author.id)
         bot.recent_tickets[str(message.author.id)] = now
 
     await bot.process_commands(message)
