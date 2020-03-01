@@ -18,7 +18,7 @@ async def get_user_vote(bot, user: int) -> bool:
         cache_time = ud.get("cache_time", now)
 
         # If not or if it is for longer than 15 minutes then retrieve a fresh vote data of the user
-        if cache_time - now > datetime.timedelta(minutes=15) or voted == "undefined":
+        if now - cache_time > datetime.timedelta(minutes=15) or voted == "undefined":
             voted = await bot.dbl_client.get_user_vote(user)
 
             # And save it to the cache
