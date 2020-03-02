@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands, tasks
 from PIL import Image, ImageDraw
 from io import BytesIO
-from ext.utils import mysql_set, test_channel, get_user_data, get_user_vote
+from ext.utils import mysql_set, get_user_data, get_user_vote
 from ext.paginator import PaginatorSession
 from collections import OrderedDict
 import mysql.connector
@@ -253,9 +253,10 @@ class UsersFight(object):
         # deduct the health, but do not let it drop below 0
         d: datetime.datetime = self.fighters["frozen"][str(user.id)]
         if d is not None and (d + datetime.timedelta(seconds=10)) >= datetime.datetime.utcnow():
-            hit = round(hit * 1.25, 2)
+            hit *= 1.25
         else:
             self.fighters["frozen"][str(user.id)] = None
+        hit = round(hit, 2)
         n = self.fighters["healths"][str(user.id)] - hit
         self.fighters["healths"][str(user.id)] = n if not n < 0 else 0
 
@@ -400,8 +401,8 @@ class UsersFight(object):
         em.description += f"{attacker.name} threw a {bomb} on {enemy.name}\n"
 
         # get the random actions
-        events = ["self", "missed", "hit", "critical"]
-        events2 = ["rolled", "burst", "critical"]
+        events = ["self", "missed", "hit", "hit", "critical", "critical"]
+        events2 = ["rolled", "burst", "burst", "critical", "critical"]
         if b in (3, 4):
             events.remove("missed")
             events2.remove("rolled")
@@ -727,7 +728,7 @@ class Currency(commands.Cog):
         # Return the prepared stream
         return final_buffer
 
-    @commands.command(aliases=["player", "flex", "profile"])
+    @commands.command(name="profile", aliases=["player", "flex"])
     async def player_stats(self, ctx, user: discord.User = None):
         """To get your info in the Bot's game"""
         if user is None:
@@ -775,8 +776,8 @@ class Currency(commands.Cog):
         """To view or purchase a powerup for yourself."""
         # The valid purchasable items
         items = [x for x in self.bot.purchasables.keys()]
-        s_help = f"The powerup {power} does not exist.\n" \
-                 f"Following are the valid items, each expire after 2 and a half days except normal bombs:\n"
+        s_help = f"The powerup {power} does not exist.\nTo buy a powerup use command `{ctx.prefix}store <powerup> " \
+                 f"<amount>`\nFollowing are the valid items, each expire after 2 and a half days except normal bombs:\n"
         for i in range(len(items)):
             item = self.bot.purchasables[items[i]]
             s_help += f"{int(i) + 1}) `{items[i]}` {item['description']}\n"
@@ -864,30 +865,28 @@ class Currency(commands.Cog):
                 return await ctx.send(f"{ctx.author.mention}, You cannot use this command when dead.")
             await mysql_set(self.bot, ctx.author.id, arg1="players", arg2="dead", arg3='NULL')
 
-        if number is None:
+        # The pages to be shown in paginator session
+        pages = []
 
-            # The pages to be shown in paginator session
-            pages = []
+        # Add all available custom_bg images
+        index = 0
+        for image in self.bg_images:
+            index += 1
+            em = discord.Embed(title=f"Custom card background number `{str(index)}`", description=str(image))
+            em.set_image(url=self.base_bg_images_url + str(image))
+            pages.append(em)
 
-            # Add all available custom_bg images
-            index = 0
-            for image in self.bg_images:
-                index += 1
-                em = discord.Embed(title=f"Custom card background number `{str(index)}`", description=str(image))
-                em.set_image(url=self.base_bg_images_url + str(image))
-                pages.append(em)
+        # Instantiate and run the paginator session
+        p_session = PaginatorSession(ctx, footer=f'Use `{ctx.prefix}card_bg set <number>` set a bg', pages=pages)
+        await p_session.run()
 
-            # Instantiate and run the paginator session
-            p_session = PaginatorSession(ctx, footer=f'Use `{ctx.prefix}card_bg set <number>` set a bg', pages=pages)
-            return await p_session.run()
-        else:
+        if number is not None:
             try:
-                image = self.bg_images[number - 1]
-                em = discord.Embed(title=f"Custom card background number `{str(number)}`", description=str(image))
-                em.set_image(url=self.base_bg_images_url + str(image))
-                return await ctx.send(embed=em)
+                i = self.bg_images[number - 1]
+                del i
+                await p_session.show_page(number - 1)
             except IndexError:
-                return await ctx.send("Any background image does not exists at the number.")
+                return await ctx.send(f"Any background image does not exists at the number {number}.")
 
     @card_background.command()
     async def set(self, ctx, number: int):
@@ -925,10 +924,9 @@ class Currency(commands.Cog):
 
     @commands.command(aliases=["challenge", "fight", "battle"], hidden=True)
     @commands.cooldown(1, 10, commands.cooldowns.BucketType.guild)
-    @test_channel()
     async def pvp(self, ctx, user: discord.User):
         if user.id == ctx.author.id and not await self.bot.is_owner(
-                ctx.author):  # User can't himself, but let owners test
+                ctx.author):  # User can't fight themselves, but let the owners test
             return await ctx.send("You can not fight with yourself fool!")
         if user.bot:
             return await ctx.send("You can not fight with a bot fool!")
