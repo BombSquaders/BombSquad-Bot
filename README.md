@@ -30,7 +30,8 @@ Make sure of following points before trying to run the bot:-
   1. You have python version >= 3.8.0
   2. You have all the requirements with correct version from the `requirements.txt`
   3. You must have `ffmpeg` installed for using audio cog
-  4. You have correctly set up the environment variables required by this bot. Following are the environment variables required:
+  4. You must have MySQL server installed locally on machine or a database server
+  5. You have correctly set up the environment variables required by this bot. Following are the environment variables required:
       - `bot_discord_token` this should be the token of the bot on discord's developer page
       - `bot_dbl_token` if your bot is listed in [DBL](https://top.gg) set this environment variable to bot's DBL token,
       or you may leave it
