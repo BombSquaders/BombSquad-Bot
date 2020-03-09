@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands, tasks
 from PIL import Image, ImageDraw
 from io import BytesIO
-from ext.utils import mysql_set, get_user_data, get_user_vote
+from ext.utils import mysql_set, get_user_data, get_user_vote, increment_ticket
 from ext.paginator import PaginatorSession
 from collections import OrderedDict
 import mysql.connector
@@ -771,7 +771,7 @@ class Currency(commands.Cog):
         # Send it
         await ctx.send(file=file, embed=em)
 
-    @commands.command(aliases=["purchase"])
+    @commands.command(aliases=["purchase", "shop"])
     async def store(self, ctx, power: str = None, amount: int = 1):
         """To view or purchase a powerup for yourself."""
         # The valid purchasable items
@@ -922,8 +922,14 @@ class Currency(commands.Cog):
         except IndexError:
             return await ctx.send("Any background image does not exists at the number.")
 
-    @commands.command(aliases=["challenge", "fight", "battle"], hidden=True)
-    @commands.cooldown(1, 10, commands.cooldowns.BucketType.guild)
+    @commands.command()
+    @commands.cooldown(1, 86400, commands.cooldowns.BucketType.user)
+    async def daily(self, ctx):
+        await increment_ticket(self.bot, ctx.author.id, 25)
+        await ctx.send("Awarded you 25 tickets for using the bot today!")
+
+    @commands.command(aliases=["challenge", "fight", "battle"])
+    @commands.cooldown(1, 5, commands.cooldowns.BucketType.guild)
     async def pvp(self, ctx, user: discord.User):
         if user.id == ctx.author.id and not await self.bot.is_owner(
                 ctx.author):  # User can't fight themselves, but let the owners test
