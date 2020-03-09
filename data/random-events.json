@@ -13,13 +13,6 @@
       "wait_for": "message",
       "answer": "punch the brake",
       "grant": {"name": "boxing_gloves", "amount":  1}
-    },
-    "3": {
-      "description": "B-9000 is doing a bank robbery at BombBank, no one can get near him",
-      "value": "React with <:AutoAimBomb:681141263033958423> to blast bomb on the B-9000 will win a auto aim bomb",
-      "wait_for": "reaction_add",
-      "answer": "<:AutoAimBomb:681141263033958423>",
-      "grant": {"name": "auto_aim_bombs", "amount":  1}
     }
   },
   "rare": {
@@ -35,7 +28,7 @@
       "value": "React with <:AutoAimBomb:681141263033958423> to destroy The Terminator using auto aim will win 2 auto aim bombs",
       "wait_for": "reaction_add",
       "answer": "<:AutoAimBomb:681141263033958423>",
-      "grant": {"name": "auto_aim_bombs", "amount":  2}
+      "grant": {"name": "auto_aim_bombs", "amount":  1}
     },
     "3": {
       "description": "A Bunny is continuously hopping with very much power in BombCity causing EarthQuakes",
@@ -59,6 +52,13 @@
       "wait_for": "reaction_add",
       "answer": "<:NuclearAbsorber:681744728282497029>",
       "grant": {"name": "tickets", "amount":  5}
+    },
+    "3": {
+      "description": "B-9000 is doing a bank robbery at BombBank, no one can get near him",
+      "value": "React with <:AutoAimBomb:681141263033958423> to blast bomb on the B-9000 will win a auto aim bomb",
+      "wait_for": "reaction_add",
+      "answer": "<:AutoAimBomb:681141263033958423>",
+      "grant": {"name": "auto_aim_bombs", "amount":  1}
     }
   },
   "legendary": {
