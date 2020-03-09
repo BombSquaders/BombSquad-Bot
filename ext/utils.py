@@ -21,8 +21,9 @@ async def get_user_vote(bot, user: int) -> bool:
         if now - cache_time > datetime.timedelta(minutes=15) or voted == "undefined":
             voted = await bot.dbl_client.get_user_vote(user)
 
-            # And save it to the cache
-            bot.dbl_user_votes[str(user)] = {"voted": voted, "cache_time": datetime.datetime.utcnow()}
+            # And save it to the cache if it is true
+            if voted:
+                bot.dbl_user_votes[str(user)] = {"voted": voted, "cache_time": datetime.datetime.utcnow()}
     return voted
 
 
@@ -56,9 +57,9 @@ async def get_user_data(bot, user: int) -> list:
         return await to_run()
 
 
-async def increment_ticket(bot, user: int):
+async def increment_ticket(bot, user: int, tickets: int = 1):
     d = await get_user_data(bot, user)
-    await mysql_set(bot, str(user), arg1="players", arg2="tickets", arg3=f"{int(d[1]) + 1}")
+    await mysql_set(bot, str(user), arg1="players", arg2="tickets", arg3=f"{int(d[1]) + tickets}")
 
 
 def test_channel():
