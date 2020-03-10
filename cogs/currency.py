@@ -525,20 +525,6 @@ class Currency(commands.Cog):
     # Run a random event every 5 minutes in a random server
     @tasks.loop(minutes=5)
     async def random_events(self):
-        # Check if it is a valid guild channel which has random events enabled
-        def pred(msg: discord.Message):
-            is_valid_guild_text_channel = not (
-                    isinstance(msg.channel, discord.DMChannel) or isinstance(msg.channel,
-                                                                             discord.GroupChannel)) and isinstance(
-                msg.channel, discord.TextChannel)
-            if not is_valid_guild_text_channel:
-                return False
-            guild: discord.Guild = msg.guild
-            channel: discord.TextChannel = msg.channel
-            perms: discord.Permissions = channel.permissions_for(discord.utils.get(guild.members, id=self.bot.user.id))
-            p_allowed = perms.send_messages and perms.use_external_emojis and perms.read_messages
-            return p_allowed
-
         m: discord.Message = None
         e = None
 
@@ -546,7 +532,22 @@ class Currency(commands.Cog):
             nonlocal m, e
             # Wait for a message by anyone in any guild or on exception run after another 5 minutes
             try:
-                m = await self.bot.wait_for('message', check=pred, timeout=60)
+                # Check if it is a valid guild channel
+                def pred1(msg: discord.Message):
+                    is_valid_guild_text_channel = not (
+                            isinstance(msg.channel, discord.DMChannel) or isinstance(msg.channel,
+                                                                                     discord.GroupChannel)) and isinstance(
+                        msg.channel, discord.TextChannel)
+                    if not is_valid_guild_text_channel:
+                        return False
+                    guild: discord.Guild = msg.guild
+                    channel: discord.TextChannel = msg.channel
+                    perms: discord.Permissions = channel.permissions_for(
+                        discord.utils.get(guild.members, id=self.bot.user.id))
+                    p_allowed = perms.send_messages and perms.use_external_emojis and perms.read_messages
+                    return p_allowed
+
+                m = await self.bot.wait_for('message', check=pred1, timeout=60)
 
                 # Check random events allowed here, because it needs to be awaited
                 random_events_allowed = await self.bot.config.get_random_events(m.guild.id)
@@ -556,14 +557,15 @@ class Currency(commands.Cog):
             except asyncio.TimeoutError:
                 # Wait again if timed out
                 await wait_for_message()
-            except Exception as e:
+            except Exception as ex:
                 # Print any exception and return, do not let any exception raise else the loop will terminate
-                print(e)
+                print(ex)
+                e = ex
 
         # Wait for a message to start a random event
         await wait_for_message()
 
-        if e is None and m is not None:
+        if not e and m:
             # Continues of if there was not any error, and the bot successfully received a message
             # Start a random event in the channel from where we received a message
             r = random.randint(1, 25)
@@ -617,17 +619,12 @@ class Currency(commands.Cog):
                 elif wait_for == "reaction_add":
                     reaction, user = await self.bot.wait_for('reaction_add', check=pred, timeout=timeout)
                 else:
-                    print("Unknown wait_for: " + wait_for)
-                    return
+                    raise ValueError("Unknown value for `wait_for`: " + wait_for)
             except asyncio.TimeoutError:
-                return await m.channel.send("The event expired, you all are lazy.")
+                await m.channel.send("The event expired, you all are lazy.")
             except Exception as e:
                 print(e)  # If there is any other error, print it to the console and return to let the loop run
             else:
-                for r in m.reactions:
-                    for us in r.users():
-                        await m.remove_reaction(r.emoji, us)
-
                 gloves = "boxing_gloves"
                 power = [x for x in self.bot.purchasables.keys() if str(x) != gloves and str(x) != "bombs"]
                 powers = {}
