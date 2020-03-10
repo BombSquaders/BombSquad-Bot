@@ -35,14 +35,13 @@ async def get_user_data(bot, user: int) -> list:
         async with connection.cursor() as cursor:
             await cursor.execute(f"SELECT * FROM `users` WHERE id={user};")
             new = [user, 0, 0, {}, None, None]
-            rows = await cursor.fetchall()
+            row = await cursor.fetchone()
 
-            if len(rows) == 0:
+            if not row:
                 # Create an entry for the player if there is None yet
                 await mysql_set(bot=bot, id=user, arg1="players", arg2="new")
                 return new  # Rerun the process of retrieving
 
-            row = rows[0]
             custom_bg = row[4] or "default.png"
             data = [int(row[0]), int(row[1]), int(row[2]), json.loads(str(row[3])), custom_bg, row[5]]
             return data  # Return the retrieved data if everything is fine
@@ -123,11 +122,11 @@ async def mysql_get(bot, server_id: str) -> list:
         connection: aiomysql.Connection = bot.MySQLConnection
         async with connection.cursor() as cursor:
             await cursor.execute(f"SELECT * FROM `servers` WHERE id={server_id};")
-            new = [(server_id, bot.default_prefix, datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), '{}', None,
-                    0)]
-            data = await cursor.fetchall()
+            new = [server_id, bot.default_prefix, datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), '{}', None,
+                   0]
+            data = await cursor.fetchone()
 
-            if len(data) == 0:  # Passes if the database does not have any entry for the asked server
+            if not data:  # Passes if the database does not have any entry for the asked server
                 await mysql_set(bot, server_id,
                                 arg3="join")  # Create an entry for the discord server if there is None yet
                 return new  # Return the new data of the server
@@ -178,7 +177,7 @@ async def mysql_set(bot, id: str, arg1: str = None, arg2: str = None, arg3: str 
                             f"UPDATE `users` SET {arg2}={arg3} WHERE id={id};")
                 else:
                     return await cursor.close()
-            bot.MySQLConnection.commit()
+            await bot.MySQLConnection.commit()
 
     try:
         await to_run()

@@ -26,8 +26,7 @@ class Config:
 
     async def get_guild_config(self, gid: str) -> dict:
         """To find the config data of a guild."""
-        rows: list = await utils.mysql_get(self.bot, gid)
-        row: tuple = rows[0]
+        row = await utils.mysql_get(self.bot, gid)
         time = row[2]
 
         if isinstance(time, datetime.datetime):
@@ -41,32 +40,32 @@ class Config:
 
     async def get_prefix(self, gid) -> str:
         """To get prefix for a guild."""
-        rows: list = await utils.mysql_get(self.bot, gid)
-        prefix = rows[0][1]
+        row = await utils.mysql_get(self.bot, gid)
+        prefix = str(row[1])
         return prefix
 
     async def get_guild_add_time(self, gid) -> str:
         """To get the time bot was added in this guild."""
-        rows: list = await utils.mysql_get(self.bot, gid)
-        time = rows[0][2]
+        row = await utils.mysql_get(self.bot, gid)
+        time = row[2]
         if isinstance(time, datetime.datetime):
             time = time.strftime('%Y-%m-%d %H:%M:%S')
         return time
 
     async def get_bstats(self, gid) -> dict:
         """To get BombSquad stats configuration of a guild."""
-        rows: list = await utils.mysql_get(self.bot, gid)
-        return json.loads(str(rows[0][3]))
+        row = await utils.mysql_get(self.bot, gid)
+        return json.loads(str(row[3]))
 
     async def get_spawn_channel(self, gid) -> int:
         """To get BombSquad stats configuration of a guild."""
-        rows: list = await utils.mysql_get(self.bot, gid)
-        return int(rows[0][4])
+        row = await utils.mysql_get(self.bot, gid)
+        return int(row[4])
 
     async def get_random_events(self, gid) -> bool:
         """To get BombSquad stats configuration of a guild."""
-        rows: list = await utils.mysql_get(self.bot, gid)
-        return int(rows[0][5]) == 1
+        row = await utils.mysql_get(self.bot, gid)
+        return int(row[5]) == 1
 
     async def update(self, gid: str, option, value):
         """Used to update config settings of a guild."""
