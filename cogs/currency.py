@@ -7,35 +7,10 @@ from io import BytesIO
 from ext.utils import mysql_set, get_user_data, get_user_vote, increment_ticket
 from ext.paginator import PaginatorSession
 from collections import OrderedDict
-import mysql.connector
 import datetime
 import json
 import os
 import random
-
-
-def get_random_events(bot, server_id: str) -> list:
-    """A synchronous method to get random events allowed or not to be used in the synchronous check function."""
-
-    def to_run():
-        bot.MySQLConnection.cmd_refresh(1)
-        bot.MySQLCursor.execute(f"SELECT * FROM `servers` WHERE id={server_id};")
-        data = bot.MySQLCursor.fetchall()
-
-        if len(data) == 0:
-            return False
-
-        return int(data[0][5]) == 1
-
-    try:
-        return to_run()
-    except mysql.connector.errors.ProgrammingError:
-        bot.MySQLConnection = mysql.connector.connect(host='localhost',
-                                                      database=os.environ.get("mysql_database"),
-                                                      user=os.environ.get("mysql_user"),
-                                                      password=os.environ.get("mysql_password"))
-        bot.MySQLCursor = bot.MySQLConnection.cursor()
-        return to_run()
 
 
 async def get_user_avatar(user: discord.Member) -> bytes:
@@ -552,133 +527,150 @@ class Currency(commands.Cog):
     async def random_events(self):
         # Check if it is a valid guild channel which has random events enabled
         def pred(msg: discord.Message):
-            nonlocal self
             is_valid_guild_text_channel = not (
                     isinstance(msg.channel, discord.DMChannel) or isinstance(msg.channel,
                                                                              discord.GroupChannel)) and isinstance(
                 msg.channel, discord.TextChannel)
             if not is_valid_guild_text_channel:
                 return False
-            random_events_allowed = get_random_events(self.bot, msg.guild.id)
             guild: discord.Guild = msg.guild
             channel: discord.TextChannel = msg.channel
             perms: discord.Permissions = channel.permissions_for(discord.utils.get(guild.members, id=self.bot.user.id))
             p_allowed = perms.send_messages and perms.use_external_emojis and perms.read_messages
-            return random_events_allowed and p_allowed
+            return p_allowed
 
-        # Wait for a message by anyone in any guild else run after another 30 minutes
-        try:
-            m: discord.Message = await self.bot.wait_for('message', check=pred)
-        except Exception as e:
-            # Print any exception and return, do not let any exception raise else the loop will terminate
-            print(e)
-            return
+        m, e = None, None
 
-        # Start a random event in the channel from where we received a message
-        r = random.randint(1, 25)
-        if r == 25:
-            title = "A legendary event occurred"
-            timeout = 15
-            color = discord.Color.dark_orange()
-            events = self.bot.r_events["legendary"]
-        elif r > 20:
-            timeout = 20
-            title = "An epic event occurred"
-            color = discord.Color.blurple()
-            events = self.bot.r_events["epic"]
-        elif r > 10:
-            timeout = 30
-            title = "A rare event occurred"
-            color = discord.Color.blue()
-            events = self.bot.r_events["rare"]
-        else:
-            timeout = 60
-            title = "A common event occurred"
-            color = discord.Color.green()
-            events = self.bot.r_events["common"]
+        async def wait_for_message():
+            nonlocal m, e
+            # Wait for a message by anyone in any guild or on exception run after another 5 minutes
+            try:
+                m: discord.Message = await self.bot.wait_for('message', check=pred, timeout=60)
 
-        event = events[random.choice([x for x in events.keys()])]
-        wait_for = event["wait_for"]
-        em: discord.Embed = discord.Embed(title=title, description=event["description"], color=color)
-        em.add_field(name="The first user to", value=event["value"], inline=False)
-        m = await m.channel.send(embed=em)
-        if wait_for == "reaction_add":
-            await m.add_reaction(str(event["answer"]))
-        await asyncio.sleep(0.01)
+                # Check random events allowed here, because it needs to be awaited
+                random_events_allowed = await self.bot.config.get_random_events(m.guild.id)
+                if not random_events_allowed:
+                    # Wait for another message if the message's guild does not allow random_events
+                    await wait_for_message()
+            except asyncio.TimeoutError:
+                # Wait again if timed out
+                await wait_for_message()
+            except Exception as e:
+                # Print any exception and return, do not let any exception raise else the loop will terminate
+                print(e)
 
-        def pred(*args):
-            nonlocal m, wait_for
-            tr = False
-            if wait_for == "message":
-                msg: discord.Message = args[0]
-                tr = msg.channel.id == m.channel.id and str(msg.content).lower().__contains__(
-                    str(event["answer"]).lower()) and not msg.author.bot
-            elif wait_for == "reaction_add":
-                react: discord.Reaction = args[0]
-                u: discord.User = args[1]
-                tr = react.message.id == m.id and str(react.emoji) == str(event["answer"]) and not u.bot
-            return tr
+        # Wait for a message to start a random event
+        await wait_for_message()
 
-        try:
-            if wait_for == "message":
-                message: discord.Message = await self.bot.wait_for('message', check=pred, timeout=timeout)
-                user = message.author
-            elif wait_for == "reaction_add":
-                reaction, user = await self.bot.wait_for('reaction_add', check=pred, timeout=timeout)
+        if e is None and m is not None:
+            # Continues of if there was not any error, and the bot successfully received a message
+            # Start a random event in the channel from where we received a message
+            r = random.randint(1, 25)
+            if r == 25:
+                title = "A legendary event occurred"
+                timeout = 15
+                color = discord.Color.dark_orange()
+                events = self.bot.r_events["legendary"]
+            elif r > 20:
+                timeout = 20
+                title = "An epic event occurred"
+                color = discord.Color.blurple()
+                events = self.bot.r_events["epic"]
+            elif r > 10:
+                timeout = 30
+                title = "A rare event occurred"
+                color = discord.Color.blue()
+                events = self.bot.r_events["rare"]
             else:
-                print("Unknown wait_for: " + wait_for)
-                return
-        except asyncio.TimeoutError:
-            return await m.channel.send("The event expired, you all are lazy.")
-        except Exception as e:
-            print(e)  # If there is any other error from network, print it to the console and return to let the loop run
-            return
+                timeout = 60
+                title = "A common event occurred"
+                color = discord.Color.green()
+                events = self.bot.r_events["common"]
 
-        for r in m.reactions:
-            for us in r.users():
-                await m.remove_reaction(r.emoji, us)
+            event = events[random.choice([x for x in events.keys()])]
+            wait_for = event["wait_for"]
+            em: discord.Embed = discord.Embed(title=title, description=event["description"], color=color)
+            em.add_field(name="The first user to", value=event["value"], inline=False)
+            m = await m.channel.send(embed=em)
+            if wait_for == "reaction_add":
+                await m.add_reaction(str(event["answer"]))
+            await asyncio.sleep(0.01)
 
-        gloves = "boxing_gloves"
-        power = [x for x in self.bot.purchasables.keys() if str(x) != gloves and str(x) != "bombs"]
-        powers = {}
-        data = await get_user_data(self.bot, user.id)
-        now = datetime.datetime.utcnow()
-        to_grant: str = event["grant"]["name"]
-        grant_amount: int = event["grant"]["amount"]
-        if to_grant in power:
-            for key in data[3].keys():
-                k_item = data[3][key]
-                if not datetime.datetime.strptime(k_item["expires"], '%Y-%m-%d %H:%M:%S') <= now:
-                    if str(key) == to_grant:
-                        expire = now + datetime.timedelta(days=2)
-                        k_item["count"] = int(int(k_item["count"]) + int(grant_amount))
-                        k_item["expires"] = f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"
-                    powers[key] = k_item
-            if to_grant not in powers.keys():
-                value = {}
-                expire = now + datetime.timedelta(days=2, hours=12)
-                value["count"] = int(grant_amount)
-                value["expires"] = f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"
-                powers[to_grant] = value
-            await mysql_set(self.bot, user.id, arg1="players", arg2="powers", arg3=f"'{str(json.dumps(powers))}'")
-        elif to_grant == gloves:
-            for key in data[3].keys():
-                value = data[3][key]
-                if not datetime.datetime.strptime(value["expires"], '%Y-%m-%d %H:%M:%S') <= now:
-                    powers[key] = value
-            expire = now + datetime.timedelta(days=2, hours=12)
-            powers[gloves] = {"count": 1, "expires": f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"}
-            await mysql_set(self.bot, user.id, arg1="players", arg2="powers", arg3=f"'{str(json.dumps(powers))}'")
-        else:
-            if to_grant == "tickets":
-                amount = grant_amount + data[1]
-            elif to_grant == "bombs":
-                amount = grant_amount + data[2]
+            def pred(*args):
+                nonlocal m, wait_for
+                tr = False
+                if wait_for == "message":
+                    msg: discord.Message = args[0]
+                    tr = msg.channel.id == m.channel.id and str(msg.content).lower().__contains__(
+                        str(event["answer"]).lower()) and not msg.author.bot
+                elif wait_for == "reaction_add":
+                    react: discord.Reaction = args[0]
+                    u: discord.User = args[1]
+                    tr = react.message.id == m.id and str(react.emoji) == str(event["answer"]) and not u.bot
+                return tr
+
+            try:
+                if wait_for == "message":
+                    message: discord.Message = await self.bot.wait_for('message', check=pred, timeout=timeout)
+                    user = message.author
+                elif wait_for == "reaction_add":
+                    reaction, user = await self.bot.wait_for('reaction_add', check=pred, timeout=timeout)
+                else:
+                    print("Unknown wait_for: " + wait_for)
+                    return
+            except asyncio.TimeoutError:
+                return await m.channel.send("The event expired, you all are lazy.")
+            except Exception as e:
+                print(e)  # If there is any other error, print it to the console and return to let the loop run
             else:
-                return print("Invalid grant item: " + to_grant)
-            await mysql_set(self.bot, user.id, arg1="players", arg2=to_grant, arg3=f"{str(amount)}")
+                for r in m.reactions:
+                    for us in r.users():
+                        await m.remove_reaction(r.emoji, us)
 
-        await m.channel.send(f"{user.mention}, you have successfully won {grant_amount} {to_grant}")
+                gloves = "boxing_gloves"
+                power = [x for x in self.bot.purchasables.keys() if str(x) != gloves and str(x) != "bombs"]
+                powers = {}
+                data = await get_user_data(self.bot, user.id)
+                now = datetime.datetime.utcnow()
+                to_grant: str = event["grant"]["name"]
+                grant_amount: int = event["grant"]["amount"]
+                if to_grant in power:
+                    for key in data[3].keys():
+                        k_item = data[3][key]
+                        if not datetime.datetime.strptime(k_item["expires"], '%Y-%m-%d %H:%M:%S') <= now:
+                            if str(key) == to_grant:
+                                expire = now + datetime.timedelta(days=2)
+                                k_item["count"] = int(int(k_item["count"]) + int(grant_amount))
+                                k_item["expires"] = f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"
+                            powers[key] = k_item
+                    if to_grant not in powers.keys():
+                        value = {}
+                        expire = now + datetime.timedelta(days=2, hours=12)
+                        value["count"] = int(grant_amount)
+                        value["expires"] = f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"
+                        powers[to_grant] = value
+                    await mysql_set(self.bot, user.id, arg1="players", arg2="powers",
+                                    arg3=f"'{str(json.dumps(powers))}'")
+                elif to_grant == gloves:
+                    for key in data[3].keys():
+                        value = data[3][key]
+                        if not datetime.datetime.strptime(value["expires"], '%Y-%m-%d %H:%M:%S') <= now:
+                            powers[key] = value
+                    expire = now + datetime.timedelta(days=2, hours=12)
+                    powers[gloves] = {"count": 1, "expires": f"{str(expire.strftime('%Y-%m-%d %H:%M:%S'))}"}
+                    await mysql_set(self.bot, user.id, arg1="players", arg2="powers",
+                                    arg3=f"'{str(json.dumps(powers))}'")
+                else:
+                    if to_grant == "tickets":
+                        amount = grant_amount + data[1]
+                    elif to_grant == "bombs":
+                        amount = grant_amount + data[2]
+                    else:
+                        return print("Invalid grant item: " + to_grant)
+                    await mysql_set(self.bot, user.id, arg1="players", arg2=to_grant, arg3=f"{str(amount)}")
+
+                await m.channel.send(f"{user.mention}, you have successfully won {grant_amount} {to_grant}")
+
 
     @random_events.before_loop
     async def before_random_events(self):
