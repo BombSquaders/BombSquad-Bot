@@ -539,13 +539,14 @@ class Currency(commands.Cog):
             p_allowed = perms.send_messages and perms.use_external_emojis and perms.read_messages
             return p_allowed
 
-        m, e = None, None
+        m: discord.Message = None
+        e = None
 
         async def wait_for_message():
             nonlocal m, e
             # Wait for a message by anyone in any guild or on exception run after another 5 minutes
             try:
-                m: discord.Message = await self.bot.wait_for('message', check=pred, timeout=60)
+                m = await self.bot.wait_for('message', check=pred, timeout=60)
 
                 # Check random events allowed here, because it needs to be awaited
                 random_events_allowed = await self.bot.config.get_random_events(m.guild.id)
@@ -670,7 +671,6 @@ class Currency(commands.Cog):
                     await mysql_set(self.bot, user.id, arg1="players", arg2=to_grant, arg3=f"{str(amount)}")
 
                 await m.channel.send(f"{user.mention}, you have successfully won {grant_amount} {to_grant}")
-
 
     @random_events.before_loop
     async def before_random_events(self):
