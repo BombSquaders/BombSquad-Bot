@@ -10,7 +10,7 @@ import asyncio
 import os
 from threading import Thread
 import sys
-import mysql.connector
+import aiomysql
 
 # The extensions to be added to our bot
 extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.py')]
@@ -111,11 +111,10 @@ async def on_connect():
     for e in extensions:  # Load available extensions
         bot.load_extension("cogs." + e)
 
-    bot.MySQLConnection = mysql.connector.connect(host='localhost',
-                                                  database=os.environ.get("mysql_database"),
-                                                  user=os.environ.get("mysql_user"),
-                                                  password=os.environ.get("mysql_password"))
-    bot.MySQLCursor = bot.MySQLConnection.cursor()
+    bot.MySQLConnection = await aiomysql.connect(host='localhost',
+                                                 db=os.environ.get("mysql_database"),
+                                                 user=os.environ.get("mysql_user"),
+                                                 password=os.environ.get("mysql_password"))
 
     if bot.dbl_client is not None:  # Make it sure that it is None, we will set it in on_ready func
         await bot.dbl_client.close()
@@ -475,7 +474,7 @@ async def vote(ctx):
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(bot.start(bot.run(os.environ.get('bot_discord_token'))))
+        loop.run_until_complete(bot.start(os.environ.get('bot_discord_token')))
     except KeyboardInterrupt:
         loop.run_until_complete(bot.logout())  # Cancel all tasks lingering
     finally:
