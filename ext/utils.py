@@ -3,7 +3,7 @@ from discord.ext import commands
 import datetime
 import random
 import json
-import mysql.connector
+import aiomysql
 import os
 
 
@@ -31,29 +31,29 @@ async def get_user_data(bot, user: int) -> list:
     """To retrieve the current data of a user."""
 
     async def to_run() -> list:
-        bot.MySQLConnection.cmd_refresh(1)
-        bot.MySQLCursor.execute(f"SELECT * FROM `users` WHERE id={user};")
-        new = [user, 0, 0, {}, None, None]
-        rows = bot.MySQLCursor.fetchall()
+        connection: aiomysql.Connection = bot.MySQLConnection
+        async with connection.cursor() as cursor:
+            await cursor.execute(f"SELECT * FROM `users` WHERE id={user};")
+            new = [user, 0, 0, {}, None, None]
+            rows = await cursor.fetchall()
 
-        if len(rows) == 0:
-            # Create an entry for the player if there is None yet
-            await mysql_set(bot=bot, id=user, arg1="players", arg2="new")
-            return new  # Rerun the process of retrieving
+            if len(rows) == 0:
+                # Create an entry for the player if there is None yet
+                await mysql_set(bot=bot, id=user, arg1="players", arg2="new")
+                return new  # Rerun the process of retrieving
 
-        row = rows[0]
-        custom_bg = row[4] or "default.png"
-        data = [int(row[0]), int(row[1]), int(row[2]), json.loads(str(row[3])), custom_bg, row[5]]
-        return data  # Return the retrieved data if everything is fine
+            row = rows[0]
+            custom_bg = row[4] or "default.png"
+            data = [int(row[0]), int(row[1]), int(row[2]), json.loads(str(row[3])), custom_bg, row[5]]
+            return data  # Return the retrieved data if everything is fine
 
     try:
         return await to_run()
-    except mysql.connector.errors.ProgrammingError:
-        bot.MySQLConnection = mysql.connector.connect(host='localhost',
-                                                      database=os.environ.get("mysql_database"),
-                                                      user=os.environ.get("mysql_user"),
-                                                      password=os.environ.get("mysql_password"))
-        bot.MySQLCursor = bot.MySQLConnection.cursor()
+    except aiomysql.Error:
+        bot.MySQLConnection = await aiomysql.connect(host='localhost',
+                                                     db=os.environ.get("mysql_database"),
+                                                     user=os.environ.get("mysql_user"),
+                                                     password=os.environ.get("mysql_password"))
         return await to_run()
 
 
@@ -120,25 +120,27 @@ async def mysql_get(bot, server_id: str) -> list:
     """Get data from a table in the bot's MySQL database"""
 
     async def to_run() -> list:
-        bot.MySQLConnection.cmd_refresh(1)
-        bot.MySQLCursor.execute(f"SELECT * FROM `servers` WHERE id={server_id};")
-        new = [(server_id, bot.default_prefix, datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), '{}', None, 0)]
-        data = bot.MySQLCursor.fetchall()
+        connection: aiomysql.Connection = bot.MySQLConnection
+        async with connection.cursor() as cursor:
+            await cursor.execute(f"SELECT * FROM `servers` WHERE id={server_id};")
+            new = [(server_id, bot.default_prefix, datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'), '{}', None,
+                    0)]
+            data = await cursor.fetchall()
 
-        if len(data) == 0:  # Passes if the database does not have any entry for the asked server
-            await mysql_set(bot, server_id, arg3="join")  # Create an entry for the discord server if there is None yet
-            return new  # Return the new data of the server
+            if len(data) == 0:  # Passes if the database does not have any entry for the asked server
+                await mysql_set(bot, server_id,
+                                arg3="join")  # Create an entry for the discord server if there is None yet
+                return new  # Return the new data of the server
 
-        return data  # Return the retrieved data if everything is fine
+            return data  # Return the retrieved data if everything is fine
 
     try:
         return await to_run()
-    except mysql.connector.errors.ProgrammingError:
-        bot.MySQLConnection = mysql.connector.connect(host='localhost',
-                                                      database=os.environ.get("mysql_database"),
-                                                      user=os.environ.get("mysql_user"),
-                                                      password=os.environ.get("mysql_password"))
-        bot.MySQLCursor = bot.MySQLConnection.cursor()
+    except aiomysql.Error:
+        bot.MySQLConnection = await aiomysql.connect(host='localhost',
+                                                     db=os.environ.get("mysql_database"),
+                                                     user=os.environ.get("mysql_user"),
+                                                     password=os.environ.get("mysql_password"))
         return await to_run()
 
 
@@ -146,40 +148,43 @@ async def mysql_set(bot, id: str, arg1: str = None, arg2: str = None, arg3: str 
     """Set data to a table in the bot's MySQL database"""
 
     async def to_run():
-        if arg3 == "join":
-            bot.MySQLCursor.execute("INSERT INTO `servers` (`id`, `prefix`, `add_time`, `bs_stats`, `spawn_channels`, "
-                                    f"`random_events`) VALUES ('{id}', 'bs!', '"
-                                    f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}','{{}}', NULL, 0);")
-        elif arg3 == "remove":
-            bot.MySQLCursor.execute(f"DELETE FROM `servers` WHERE id={id};")
-        else:
-            if arg1 == "prefix":
-                bot.MySQLCursor.execute(f"UPDATE `servers` SET prefix='{arg2}' WHERE id={id};")
-            if arg1 == "spawn_channel":
-                bot.MySQLCursor.execute(f"UPDATE `servers` SET spawn_channels={arg2} WHERE id={id};")
-            if arg1 == "random_events":
-                bot.MySQLCursor.execute(f"UPDATE `servers` SET random_events={arg2} WHERE id={id};")
-            elif arg1 == "bs_stats":
-                bot.MySQLCursor.execute(f"UPDATE `servers` SET bs_stats='{arg2}' WHERE id={id};")
-            elif arg1 == "fan_arts":
-                bot.MySQLCursor.execute(
-                    f"INSERT INTO `fan_arts` (`username`, `img_url`, `send_time`) VALUES ('{id}', '{arg2}', '{arg3}');")
-            elif arg1 == "players":
-                if arg2 == "new":
-                    bot.MySQLCursor.execute(
-                        "INSERT INTO `users` (`id`, `tickets`, `bombs`, `powers`, `custom_bg`, `dead`) VALUES "
-                        f"('{id}', 50, 1, '{{}}', NULL, NULL);")
+        async with bot.MySQLConnection.cursor() as cursor:
+            if arg3 == "join":
+                await cursor.execute(
+                    "INSERT INTO `servers` (`id`, `prefix`, `add_time`, `bs_stats`, `spawn_channels`, "
+                    f"`random_events`) VALUES ('{id}', 'bs!', '"
+                    f"{datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}','{{}}', NULL, 0);")
+            elif arg3 == "remove":
+                await cursor.execute(f"DELETE FROM `servers` WHERE id={id};")
+            else:
+                if arg1 == "prefix":
+                    await cursor.execute(f"UPDATE `servers` SET prefix='{arg2}' WHERE id={id};")
+                if arg1 == "spawn_channel":
+                    await cursor.execute(f"UPDATE `servers` SET spawn_channels={arg2} WHERE id={id};")
+                if arg1 == "random_events":
+                    await cursor.execute(f"UPDATE `servers` SET random_events={arg2} WHERE id={id};")
+                elif arg1 == "bs_stats":
+                    await cursor.execute(f"UPDATE `servers` SET bs_stats='{arg2}' WHERE id={id};")
+                elif arg1 == "fan_arts":
+                    await cursor.execute(
+                        f"INSERT INTO `fan_arts` (`username`, `img_url`, `send_time`) VALUES ('{id}', '{arg2}', '{arg3}');")
+                elif arg1 == "players":
+                    if arg2 == "new":
+                        await cursor.execute(
+                            "INSERT INTO `users` (`id`, `tickets`, `bombs`, `powers`, `custom_bg`, `dead`) VALUES "
+                            f"('{id}', 50, 1, '{{}}', NULL, NULL);")
+                    else:
+                        await cursor.execute(
+                            f"UPDATE `users` SET {arg2}={arg3} WHERE id={id};")
                 else:
-                    bot.MySQLCursor.execute(
-                        f"UPDATE `users` SET {arg2}={arg3} WHERE id={id};")
-        bot.MySQLConnection.commit()
+                    return await cursor.close()
+            bot.MySQLConnection.commit()
 
     try:
         await to_run()
-    except mysql.connector.errors.ProgrammingError:
-        bot.MySQLConnection = mysql.connector.connect(host='localhost',
-                                                      database=os.environ.get("mysql_database"),
-                                                      user=os.environ.get("mysql_user"),
-                                                      password=os.environ.get("mysql_password"))
-        bot.MySQLCursor = bot.MySQLConnection.cursor()
+    except aiomysql.Error:
+        bot.MySQLConnection = await aiomysql.connect(host='localhost',
+                                                     db=os.environ.get("mysql_database"),
+                                                     user=os.environ.get("mysql_user"),
+                                                     password=os.environ.get("mysql_password"))
         await to_run()
