@@ -48,7 +48,8 @@ async def get_user_data(bot, user: int) -> list:
 
     try:
         return await to_run()
-    except aiomysql.Error:
+    # If any aiomysql error occurs or the pool is None due to connection errors or timeouts
+    except (aiomysql.Error, AttributeError, TypeError):
         bot.db_pool = await aiomysql.create_pool(host='localhost',
                                                  db=os.environ.get("mysql_database"),
                                                  user=os.environ.get("mysql_user"),
@@ -136,7 +137,8 @@ async def mysql_get(bot, server_id: str) -> list:
 
     try:
         return await to_run()
-    except aiomysql.Error:
+    # If any aiomysql error occurs or the pool is None due to connection errors or timeouts
+    except (aiomysql.Error, AttributeError, TypeError):
         bot.db_pool = await aiomysql.create_pool(host='localhost',
                                                  db=os.environ.get("mysql_database"),
                                                  user=os.environ.get("mysql_user"),
@@ -183,7 +185,8 @@ async def mysql_set(bot, id: str, arg1: str = None, arg2: str = None, arg3: str 
 
     try:
         await to_run()
-    except aiomysql.Error:
+        # If any aiomysql error occurs or the pool is None due to connection errors or timeouts
+    except (aiomysql.Error, AttributeError, TypeError):
         bot.db_pool = await aiomysql.create_pool(host='localhost',
                                                  db=os.environ.get("mysql_database"),
                                                  user=os.environ.get("mysql_user"),
