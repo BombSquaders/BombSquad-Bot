@@ -112,10 +112,11 @@ async def on_connect():
     for e in extensions:  # Load available extensions
         bot.load_extension("cogs." + e)
 
-    bot.db_pool = await aiomysql.create_pool(host='localhost',
-                                             db=os.environ.get("mysql_database"),
-                                             user=os.environ.get("mysql_user"),
-                                             password=os.environ.get("mysql_password"))
+    if not bot.db_pool:
+        bot.db_pool = await aiomysql.create_pool(host='localhost',
+                                                 db=os.environ.get("mysql_database"),
+                                                 user=os.environ.get("mysql_user"),
+                                                 password=os.environ.get("mysql_password"))
 
     if bot.dbl_client is not None:  # Make it sure that it is None, we will set it in on_ready func
         await bot.dbl_client.close()
@@ -126,11 +127,6 @@ async def on_connect():
 async def on_disconnect():
     global inpt
     inpt = False  # Stop reading input from terminal
-
-    if bot.db_pool:
-        bot.db_pool.close()
-        await bot.db_pool.wait_closed()
-        bot.db_pool = None
 
     if bot.dbl_client is not None:  # Stop the DBL client because we are disconnected from discord
         await bot.dbl_client.close()
