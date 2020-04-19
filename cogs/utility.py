@@ -208,15 +208,26 @@ class Utility(commands.Cog):
 		await suggest.send(embed=em)
 		await ctx.send("Your idea has been successfully sent to support server. Thank you!")
 
-	@commands.command(aliases=["server", "server_list", "server-list"])
+	@commands.command(aliases=["bs_server", "bs-server","server_list", "server-list"])
 	@commands.cooldown(1, 15, BucketType.user)
 	async def _search(self, ctx, *, region: str):
 		"""To get a list of servers according to region."""
 		#Made By: AwesomeLogic
 		url = f"https://awesomelogic.herokuapp.com/api/{region}"
-		async with aiohttp.ClientSession() as session:
-			async with session.get(url) as resp:
-				data = json.loads(eval(await resp.read()))
+		try:
+			async with aiohttp.ClientSession() as session:
+				async with session.get(url) as resp:
+					data = json.loads(eval(await resp.read()))
+		except:
+			em = discord.Embed(title=f'{region} is not in Region List.',color=utils.random_color())
+			async with aiohttp.ClientSession() as session:
+				async with session.get('https://awesomelogic.herokuapp.com/api/regions') as resp:
+					data = json.loads(eval(await resp.read()))
+			em.add_field(name='Available Regions',
+						 value=str(data))
+			await ctx.send(embed=em)
+
+
 		em = discord.Embed(title=f'Server List in {region}', description="Credits: AwesomeLogic", color=utils.random_color())
 		for i in data:
 			name = i['name']
