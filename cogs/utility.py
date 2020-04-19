@@ -225,7 +225,7 @@ class Utility(commands.Cog):
 					data = json.loads(eval(await resp.read()))
 			em.add_field(name='Available Regions',
 						 value=str(data))
-			await ctx.send(embed=em)
+			return await ctx.send(embed=em)
 
 
 		em = discord.Embed(title=f'Server List in {region}', description="Credits: AwesomeLogic", color=utils.random_color())
@@ -236,7 +236,7 @@ class Utility(commands.Cog):
 			full = i['full']
 			em.add_field(name=name,
 						 value=f"IP: {ip}\nPort: {port}\nParty is Full:{full}")
-		await ctx.send(embed=em)
+		return await ctx.send(embed=em)
 
 	@commands.command(aliases=["fan-art", "fan_art"])
 	@commands.cooldown(1, 15, BucketType.user)
