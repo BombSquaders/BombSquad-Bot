@@ -226,6 +226,7 @@ class Utility(commands.Cog):
 			em.add_field(name='Available Regions',
 						 value=str(data))
 			await ctx.send(embed=em)
+			return  # Should return if error is found and not continue to the code
 
 
 		em = discord.Embed(title=f'Server List in {region}', description="Credits: AwesomeLogic", color=utils.random_color())
