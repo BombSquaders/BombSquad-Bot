@@ -270,8 +270,10 @@ class Utility(commands.Cog):
 
         for i in ipv4s:
             index += 1
+            # Escape common discord markdown characters
+            name = str(i['name']).replace("*", "\\*").replace("_", "\\_").replace("||", "\\||").replace("`", "\\`")
             em = discord.Embed(title=f'BS Server List in {region}', description=f"Number: {str(index)}\n"
-                                                                                f"Name: {str(i['name'])}\n",
+                                                                                f"Name: {name}\n",
                                color=utils.random_color())
             em.add_field(name="IPv4", value=str(i['ip']))
             em.add_field(name="Port", value=str(i['port']))
@@ -281,11 +283,12 @@ class Utility(commands.Cog):
 
         for i in ipv6s:
             index += 1
+            # Escape common discord markdown characters
+            name = str(i['name']).replace("*", "\\*").replace("_", "\\_").replace("||", "\\||").replace("`", "\\`")
             em = discord.Embed(title=f'BS Server List in {region}', description=f"Number: {str(index)}\n"
-                                                                                f"Name: {str(i['name'])}\n"
-                                                                                f"Sorted according to lowest ping.",
+                                                                                f"Name: {name}\n",
                                color=utils.random_color())
-            em.add_field(name="**WEIRD SERVER**", value="*This BombSquad game party has not public IPv4 address!\n"
+            em.add_field(name="**WEIRD SERVER**", value="*This BombSquad game party has no public IPv4 address!\n"
                                                         "WHY IS THIS PARTY MADE?*")
             em.add_field(name="IPv6", value=str(i['ip']))
             em.add_field(name="Port", value=str(i['port']))
