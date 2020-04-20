@@ -6,6 +6,7 @@ import json
 import io
 import aiohttp
 import pytz
+import urllib.parse
 import wikipedia
 from ext import utils, paginator
 from bot import MyBot
@@ -221,36 +222,80 @@ class Utility(commands.Cog):
         await suggest.send(embed=em)
         await ctx.send("Your idea has been successfully sent to support server. Thank you!")
 
+    # noinspection DuplicatedCode
     @commands.command(aliases=["bs_servers_list", "bs-servers-list"])
     @commands.cooldown(1, 15, BucketType.user)
     async def _bs_search(self, ctx: commands.Context, *, region: str):
         """To get a list of servers according to region."""
-        # Made By: AwesomeLogic
-        url: str = f"https://awesomelogic.herokuapp.com/api/{region}"
+        # Made possible by AwesomeLogic
+        url: str = f"https://awesomelogic.herokuapp.com/api/{urllib.parse.quote(region.lower())}"
+
+        if region.lower() == "regions":
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as resp:
+                    data: List[str] = json.loads((await resp.read()).decode("utf-8"))
+                    resp.close()
+                    await ctx.send(f"Available regions are: {data}")
+                    return
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as resp:
-                    data: List[Dict[AnyStr, Any]] = json.loads(await resp.read())
+                    resp.raise_for_status()
+                    data: List[Dict[AnyStr, Any]] = json.loads((await resp.read()).decode("utf-8"))
+                    resp.close()
         except Exception:
             em = discord.Embed(title=f'{region} is not in Region List.', color=utils.random_color())
             async with aiohttp.ClientSession() as session:
                 async with session.get('https://awesomelogic.herokuapp.com/api/regions') as resp:
-                    data: Dict[str, Any] = json.loads(await resp.read())
-            em.add_field(name='Available Regions',
-                         value=str(data))
+                    data: List[str] = json.loads((await resp.read()).decode("utf-8"))
+                    resp.close()
+            em.add_field(name='Available Regions', value=str(data))
             await ctx.send(embed=em)
             return
 
-        em = discord.Embed(title=f'BS Server List in {region}', description="Credits: AwesomeLogic",
-                           color=utils.random_color())
-        for i in data:
-            name = str(i['name'])
-            ip = str(i['ip'])
-            port = str(i['port'])
-            full = str(i['full'])
-            em.add_field(name=name,
-                         value=f"IP: {ip}\nPort: {port}\nParty is Full:{full}")
-        await ctx.send(embed=em)
+        ipv4s: List[Dict[AnyStr, Any]] = [x for x in data if
+                                          len(str(x["ip"]).split(".")) == 4 and ":" not in str(x["ip"])]
+        ipv6s: List[Dict[AnyStr, Any]] = [x for x in data if x not in ipv4s]
+
+        pages: List[discord.Embed] = []
+
+        reg: str = urllib.parse.unquote(region.lower())
+        region: str = ""
+        for r in reg.split():
+            region += r[0].upper()
+            region += r.replace(r[0], "", 1)
+            region += " "
+        index: int = 0
+
+        for i in ipv4s:
+            index += 1
+            em = discord.Embed(title=f'BS Server List in {region}', description=f"Number: {str(index)}\n"
+                                                                                f"Name: {str(i['name'])}\n",
+                               color=utils.random_color())
+            em.add_field(name="IPv4", value=str(i['ip']))
+            em.add_field(name="Port", value=str(i['port']))
+            em.add_field(name="Current players", value=str(i["count"]))
+            em.add_field(name="Max players", value=str(i['size']))
+            pages.append(em)
+
+        for i in ipv6s:
+            index += 1
+            em = discord.Embed(title=f'BS Server List in {region}', description=f"Number: {str(index)}\n"
+                                                                                f"Name: {str(i['name'])}\n"
+                                                                                f"Sorted according to lowest ping.",
+                               color=utils.random_color())
+            em.add_field(name="**WEIRD SERVER**", value="*This BombSquad game party has not public IPv4 address!\n"
+                                                        "WHY IS THIS PARTY MADE?*")
+            em.add_field(name="IPv6", value=str(i['ip']))
+            em.add_field(name="Port", value=str(i['port']))
+            em.add_field(name="Current players", value=str(i["count"]))
+            em.add_field(name="Max players", value=str(i['size']))
+            pages.append(em)
+
+        p_ses: paginator.PaginatorSession = paginator.PaginatorSession(ctx, pages=pages,
+                                                                       footer="Made possible by AwesomeLogic")
+        await p_ses.run()
 
     @commands.command(aliases=["fan-art", "fan_art"])
     @commands.cooldown(1, 15, BucketType.user)
