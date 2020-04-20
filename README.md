@@ -41,7 +41,7 @@ Make sure of following points before trying to run the bot:-
       for security and other reason it is recommended to use the same username and database name
 
 And after you have done all changes and these points are ensured you can run the bot simply by opening a terminal in the root
- directory and type in the terminal `python bot.py` or `<python version/path> bot.py` based on your OS settings.
+ directory then on linux or mac you can just use `./bot.py` on windows you need to run `python bot.py` or `<python version/path> bot.py` based on your OS settings.
 
 ## Other README files
 There are more README files spread in the directories on this branch of this repository.
