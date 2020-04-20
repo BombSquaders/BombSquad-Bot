@@ -5,21 +5,24 @@ import aiohttp
 from ext import utils
 from ext.paginator import PaginatorSession
 import json
+from typing import Optional, List
+from bot import MyBot
 
 
+# noinspection DuplicatedCode
 class Config(commands.Cog):
     """Customize your server with these configuration commands."""
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.bs_server_files = "https://www.github.com/I-Am-The-Great/BombSquad-Server/"
+    def __init__(self, bot: MyBot):
+        self.bot: MyBot = bot
+        self.bs_server_files: str = "https://www.github.com/BombSquaders/bombsquad-server-api4/"
 
     @commands.command()
-    async def prefix(self, ctx, *, pre=None):
+    async def prefix(self, ctx: commands.Context, *, pre: Optional[str] = None):
         """Set a custom prefix for the guild."""
 
         # Get prefix
-        result = await self.bot.config.get_prefix(str(ctx.guild.id))
+        result: str = await self.bot.config.get_prefix(str(ctx.guild.id))
 
         if pre is None:
             return await ctx.send(f"The current prefix in this guild is `{result}`.\n"
@@ -39,7 +42,7 @@ class Config(commands.Cog):
 
     @commands.command(aliases=["spawn_channel", "enemy_spawn"])
     @commands.has_permissions(manage_guild=True)
-    async def enemy_spawn_channel(self, ctx, ch: discord.TextChannel = None):
+    async def enemy_spawn_channel(self, ctx: commands.Context, ch: discord.TextChannel = None):
         """Set the channel for this guild where to spawn enemies, or use it without any arguments to disable."""
         if ch is None:  # Disable the enemy spawns if no channel provided
             await self.bot.config.update(str(ctx.guild.id), "spawn_channel", "NULL")
@@ -53,7 +56,7 @@ class Config(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_guild=True)
-    async def random_events(self, ctx, allow: str = "no"):
+    async def random_events(self, ctx: commands.Context, allow: str = "no"):
         """Set if random events are to be allowed or disabled in this discord server."""
         if allow.lower() in ("no", "n", "disable", "disallow", "false"):
             await self.bot.config.update(str(ctx.guild.id), "random_events", "0")
@@ -65,8 +68,9 @@ class Config(commands.Cog):
         # Send confirmation
         await ctx.send(f'Random events are now allowed in this server.')
 
+    @utils.test_channel()
     @commands.group(invoke_without_command=True, aliases=["bs", "bs_server", "bs_stats"])
-    async def bs_server_stats(self, ctx):
+    async def bs_server_stats(self, ctx: commands.Context):
         """Use it if you want to set a BS server to get stats from or if you want to retrieve stats from current set."""
 
         # Command group used without sub-command argument
@@ -84,12 +88,13 @@ class Config(commands.Cog):
                            "server file's generated stats files.")
         await ctx.send(embed=em)
 
+    @utils.test_channel()
     @bs_server_stats.command(aliases=["set"])
     @commands.has_permissions(manage_guild=True)
-    async def add(self, ctx):
+    async def add(self, ctx: commands.Context):
         """Use this command to set a BombSquad game's server to retrieve stats data from."""
 
-        def msg(m):
+        def msg(m: discord.Message):
             return m.author == ctx.author and m.channel == ctx.message.channel
 
         # Ask for and get the stats json file link
@@ -97,7 +102,7 @@ class Config(commands.Cog):
             "Ohk, now send the complete link of the .json file which stores stats of the BS server in 60 seconds."
             "The link must include auth details if there is any!")
         try:
-            link = await self.bot.wait_for('message', check=msg, timeout=60.0)
+            link: discord.Message = await self.bot.wait_for('message', check=msg, timeout=60.0)
         except asyncio.TimeoutError:
             return await ctx.send("You failed to give a valid message in time, think again and then restart.")
 
@@ -108,7 +113,7 @@ class Config(commands.Cog):
         # Get the name of the BombSquad server of the stats file
         await ctx.send("Ohk, now send the name of the BombSquad server.")
         try:
-            name = await self.bot.wait_for('message', check=msg, timeout=60.0)
+            name: discord.Message = await self.bot.wait_for('message', check=msg, timeout=60.0)
         except asyncio.TimeoutError:
             return await ctx.send("You failed to give a valid message in time, think again and then restart.")
 
@@ -116,12 +121,12 @@ class Config(commands.Cog):
         await ctx.send("Now send me a natural number that you want to be the id of this stats entry."
                        "(If you send an already used id it will be overridden)")
         try:
-            sid = await self.bot.wait_for('message', check=msg, timeout=60.0)
+            sid: discord.Message = await self.bot.wait_for('message', check=msg, timeout=60.0)
         except asyncio.TimeoutError:
             return await ctx.send("You failed to give a valid message in time, think again and then restart.")
 
         # The json data to save
-        data = {
+        data: dict = {
             str(sid.content): {
                 "name": str(name.content),
                 "link": str(link.content)
@@ -133,8 +138,9 @@ class Config(commands.Cog):
         await ctx.send(f"This stats file entry has been successfully set, it's ID is {str(sid.content)}."
                        f"To get data from it use `{ctx.prefix}bs_stats get {str(sid.content)}")
 
+    @utils.test_channel()
     @bs_server_stats.command()
-    async def get(self, ctx, set_id: str):
+    async def get(self, ctx: commands.Context, set_id: str):
         """Use this command to get the stats of the BombSquad server set for this guild by id."""
 
         # Retrieve config data from database
@@ -148,14 +154,14 @@ class Config(commands.Cog):
                 json_data = json.loads(await resp.read())
 
         # Initiating variables
-        pages = []
-        rank = 0
+        pages: List[discord.Embed] = []
+        rank: int = 0
         try:
             for i in range(len(json_data)):
                 # For each player's entry in the stats file add a new embed page
                 rank += 1
-                img_url = json_data[str(rank)]["icon_url"]
-                p_name = json_data[str(rank)]["name"]
+                img_url: str = json_data[str(rank)]["icon_url"]
+                p_name: str = json_data[str(rank)]["name"]
                 em = discord.Embed(title=f"Player stats data for the {name} BombSquad server.")
                 if rank == 1:
                     em.description = "1st ranker."
@@ -192,14 +198,15 @@ class Config(commands.Cog):
             return await ctx.send(embed=em)
 
         # Star the pagination session for showing all the stats pages to the command user
-        p_session = PaginatorSession(ctx,
-                                     footer=f'Use the reactions of this message below to navigate between the data of'
-                                            f' different rank holders.',
-                                     pages=pages)
+        p_session: PaginatorSession = PaginatorSession(ctx,
+                                                       footer=f'Use the reactions of this message below to navigate between the data of'
+                                                              f' different rank holders.',
+                                                       pages=pages)
         await p_session.run()
 
+    @utils.test_channel()
     @bs_server_stats.command()
-    async def search(self, ctx, set_id: str, *, search: str):
+    async def search(self, ctx: commands.Context, set_id: str, *, search: str):
         """Use this command to search a player in the stats of the BombSquad server set for this guild by id."""
 
         # Same process to get the data from config and url
@@ -209,15 +216,16 @@ class Config(commands.Cog):
         async with aiohttp.ClientSession() as session:
             async with session.get(link) as resp:
                 json_data = json.loads(await resp.read())
-        pages = []
-        rank = 0
+        pages: List[discord.Embed] = []
+        rank: int = 0
 
+        em: discord.Embed
         try:
             for i in range(len(json_data)):
                 # Loop through each player stats input in the file
                 rank += 1
-                img_url = json_data[str(rank)]["icon_url"]
-                p_name = json_data[str(rank)]["name"]
+                img_url: str = json_data[str(rank)]["icon_url"]
+                p_name: str = json_data[str(rank)]["name"]
                 if str(p_name).lower().__contains__(search.lower()):
                     # But only add those which match the name
                     em = discord.Embed(title=f"Player stats data for the {name} BombSquad server .",
@@ -251,9 +259,10 @@ class Config(commands.Cog):
                                      pages=pages)
         await p_session.run()
 
+    @utils.test_channel()
     @bs_server_stats.command(aliases=["remove", "del"])
     @commands.has_permissions(manage_guild=True)
-    async def delete(self, ctx, sid):
+    async def delete(self, ctx: commands.Context, sid: str):
         """Use this command to get the stats of the BombSquad server set for this guild by id."""
 
         # Get the current config, remove the requested item if exists
@@ -269,8 +278,9 @@ class Config(commands.Cog):
         await self.bot.config.update(ctx.guild.id, "BSStats", data)
         await ctx.send(f"Ohk, successfully removed the BStats of ID {str(sid)} from this guild.")
 
+    @utils.test_channel()
     @bs_server_stats.command(aliases=["show", "all"])
-    async def list(self, ctx, noembed: str = None):
+    async def list(self, ctx: commands.Context, noembed: Optional[str] = None):
         """Use this command to list all the BombSquad server stats set for this guild by id."""
         data = await self.bot.config.get_bstats(ctx.guild.id)
         if noembed is not None and str(noembed).endswith("noembed"):
@@ -289,5 +299,5 @@ class Config(commands.Cog):
             await ctx.send(embed=em)
 
 
-def setup(bot):
+def setup(bot: MyBot):
     bot.add_cog(Config(bot))
