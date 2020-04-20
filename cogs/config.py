@@ -194,13 +194,13 @@ class Config(commands.Cog):
             em.add_field(name="Error in stats file",
                          value="Are you sure you are using the server files from [This Github repository]"
                                f"({self.bs_server_files})")
-            em.set_footer(text=f"Contact <@{self.bot.creator.discord}> to resolve if you already use the server files.")
+            em.set_footer(text=f"Contact in support server to resolve if you already use the server files.")
             return await ctx.send(embed=em)
 
         # Star the pagination session for showing all the stats pages to the command user
         p_session: PaginatorSession = PaginatorSession(ctx,
-                                                       footer=f'Use the reactions of this message below to navigate between the data of'
-                                                              f' different rank holders.',
+                                                       footer=f'Use the reactions of this message below to navigate '
+                                                              f'between the data of different rank holders.',
                                                        pages=pages)
         await p_session.run()
 
@@ -251,7 +251,7 @@ class Config(commands.Cog):
             em.add_field(name="Error in stats file",
                          value="Are you sure you are using the server files from [This Github repository]"
                                f"({self.bs_server_files})")
-            em.set_footer(text=f"Contact <@{self.bot.creator.discord}> to resolve if you already use the server files.")
+            em.set_footer(text=f"Contact in support server to resolve if you already use the server files.")
             return await ctx.send(embed=em)
         p_session = PaginatorSession(ctx,
                                      footer=f'Use the reactions of this message below to navigate between the data of'

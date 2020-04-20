@@ -64,13 +64,13 @@ inpt: bool = False
 
 class BotCreator(object):
     """Just a class to contain the creator info."""
-    name = "Rahul Raman"  # The creator name here
+    github = "https://www.github.com/BombSquaders/"  # The Github account url
+    bot_github = f"{github}BombSquad-Bot/"  # The repository name of this bot's source code on Github
+    name = f"[BombSquaders organization]({github})"  # The creator name here
     url = "https://www.thegr8.tk/"  # The website or web-page of the creator here
-    icon = "https://cdn.discordapp.com/avatars/473128022711730177/1ad0000289058a2fe2e2f7ed340672f0.webp"  # The icon url
-    github = "https://www.github.com/I-Am-The-Great/"  # The Github account url
+    icon = "https://avatars1.githubusercontent.com/u/62781896"  # The icon url
     patreon = "https://patreon.com/rahulraman108"  # The patreon page of the creator
     discord = 473128022711730177  # Discord id snowflake of the creator's discord account
-    bot_github = github + "BombSquad-Bot/"  # The repository name of this bot's source code on Github
     support_server = "https://discord.gg/BCZvf3W"  # The bot's support discord server invite
     bot_invite_perms = "36981824"  # Bot invite required permissions, use 1077406934 if you want to use the mods cog
 
@@ -440,7 +440,7 @@ async def _bot(ctx: commands.Context):
 async def creator(ctx: commands.Context):
     """Shows bot's creator"""
     em: discord.Embed = discord.Embed(title="BombSquad Bot creator",
-                                      description=f"<@{bot.creator.discord}> is my creator.")
+                                      description=f"I am created by the {bot.creator.name}.")
     em.set_author(name=bot.creator.name, url=bot.creator.url, icon_url=bot.creator.icon)
     em.add_field(name="Support the creator", value=f"[Patreon Page]({bot.creator.patreon})")
     em.set_footer(text="BombSquad Bot | Powered by discord.py")
