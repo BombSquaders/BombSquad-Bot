@@ -82,8 +82,11 @@ class MyBot(commands.Bot):
 
         self.remove_command("help")  # We will add a new help command for our bot later
 
-        self.default_prefix: str = "bs!"  # The bot's default prefix for new servers
+        self.basedir: str = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(self.basedir)
+
         self.creator: BotCreator = BotCreator()  # Set the Bot Creator attribute
+        self.default_prefix: str = "bs!"  # The bot's default prefix for new servers
         self.db_pool: Optional[aiomysql.Pool] = None
         self.dbl_token: Optional[str] = os.environ.get("bot_dbl_token", None)  # The Discord Bot List token
         self.dbl_user_votes: Dict[str, Any] = {}  # For caching the users who upvote the bot
@@ -117,7 +120,6 @@ async def on_connect():
     for extension in ex:  # Unload any loaded extension
         bot.unload_extension(extension)
 
-    bot.basedir = os.getcwd()
     bot.config = config.Config(bot)
 
     for e in extensions:  # Load available extensions

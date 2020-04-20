@@ -2,24 +2,25 @@ from ext import update, utils
 import datetime
 import os
 import json
+from bot import MyBot
 
 
 class Config:
     """The class to handle the custom configurations of the bot."""
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self, bot: MyBot):
+        self.bot: MyBot = bot
         self.dir = os.path.join(bot.basedir, "ext/config")
-        with open(os.path.join(bot.basedir, "data/jokes.json")) as f:
+        with open("data/jokes.json") as f:
             self.bot.jokes = json.loads(f.read())
             f.close()
-        with open(os.path.join(bot.basedir, "data/trivias.json")) as f:
+        with open("data/trivias.json") as f:
             self.bot.trivias = json.loads(f.read())
             f.close()
-        with open(os.path.join(bot.basedir, "data/random-events.json")) as f:
+        with open("data/random-events.json") as f:
             self.bot.r_events = json.loads(f.read())
             f.close()
-        with open(os.path.join(bot.basedir, "data/purchasables.json")) as f:
+        with open("data/purchasables.json") as f:
             self.bot.purchasables = json.loads(f.read())
             f.close()
         self.bot.bssounds = os.listdir(os.path.join(self.bot.basedir, "bssounds/"))
