@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.8
 import discord
 from discord.ext import commands
 import dbl
@@ -12,8 +13,10 @@ from threading import Thread
 import sys
 import aiomysql
 
+from typing import List, Any, Dict, Optional
+
 # The extensions to be added to our bot
-extensions = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.py')]
+extensions: List[str] = [x.replace('.py', '') for x in os.listdir('cogs') if x.endswith('.py')]
 
 
 # A function to get the prefix of the bot for a message
@@ -29,8 +32,8 @@ async def prefix(d_client, message):
 class RunInput(Thread):
     def run(self):
         global inpt
-        que = False
-        cmd = ""
+        que: bool = False
+        cmd: str = ""
         while inpt:
             command = str(sys.stdin.readline()).rstrip()
             if not que:
@@ -55,9 +58,8 @@ class RunInput(Thread):
                     cmd += command + "\n"
 
 
-t = None
-
-inpt = False
+t: Thread
+inpt: bool = False
 
 
 class BotCreator(object):
@@ -74,23 +76,32 @@ class BotCreator(object):
 
 
 # Our bot instance, use commands.AutoShardedBot if the bot passes 1000 server
-bot = commands.Bot(command_prefix=prefix,
-                   description=f"A discord bot made by {BotCreator.name} having special brand new features "
-                               f"related to the BombSquad game.")
-bot.remove_command('help')  # We will add a new help command for our bot later
-bot.default_prefix = "bs!"  # The bot's default prefix for new servers
-bot.creator = BotCreator()  # Set the Bot Creator attribute
-bot.db_pool = None
-dt = str(os.environ.get("bot_dbl_token", None))
-bot.dbl_token = dt if dt != "None" else None  # The Discord Bot List token
-bot.dbl_user_votes = {}  # For caching the users who upvote the bot
-bot.recent_tickets = {}  # For granting tickets on messaging every 1 minute
+class MyBot(commands.Bot):
+    def __init__(self, command_prefix, **options):
+        super().__init__(command_prefix, **options)
 
-# Now setting some custom attributes for our bot for later use
-bot.announcement = None
-bot.config = None
-bot.dbl_client = None
-tt = timedelta(minutes=2)
+        self.remove_command("help")  # We will add a new help command for our bot later
+
+        self.default_prefix: str = "bs!"  # The bot's default prefix for new servers
+        self.creator: BotCreator = BotCreator()  # Set the Bot Creator attribute
+        self.db_pool: Optional[aiomysql.Pool] = None
+        self.dbl_token: Optional[str] = os.environ.get("bot_dbl_token", None)  # The Discord Bot List token
+        self.dbl_user_votes: Dict[str, Any] = {}  # For caching the users who upvote the bot
+
+        # For granting tickets on messaging every 1 minute
+        self.recent_tickets: Dict[str, datetime] = {}
+
+        # Now setting some custom attributes for our bot for later use
+        self.announcement: Optional[str] = None
+        self.config: Optional[config.Config] = None
+        self.dbl_client: Optional[dbl.DBLClient] = None
+
+        self.tt: timedelta = timedelta(minutes=2)
+
+
+bot: MyBot = MyBot(command_prefix=prefix,
+                   description=f"A discord bot made by {BotCreator.name} having special brand new "
+                               f"features related to the BombSquad game.")
 
 
 @bot.event
@@ -162,7 +173,7 @@ async def on_ready():
 
 
 @bot.event
-async def on_dbl_vote(data):
+async def on_dbl_vote(data: Dict[str, Any]):
     uid = data["user"]
     print("Vote received")
     await increment_ticket(bot, uid)
@@ -170,10 +181,11 @@ async def on_dbl_vote(data):
 
 
 @bot.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx: commands.Context, error: Exception):
     # Errors for which the user needs help
-    send_help = (
+    send_help: tuple = (
         commands.MissingRequiredArgument, commands.BadArgument, commands.TooManyArguments, commands.UserInputError)
+    em: discord.Embed
 
     if isinstance(error, commands.CommandNotFound):  # Fails silently
         pass
@@ -182,7 +194,7 @@ async def on_command_error(ctx, error):
         pass
 
     elif isinstance(error, send_help):
-        help_message = await send_cmd_help(ctx)
+        help_message: discord.Embed = await send_cmd_help(ctx)
         await ctx.send(embed=help_message)
 
     elif isinstance(error, commands.CommandOnCooldown):
@@ -215,8 +227,8 @@ async def on_message(message: discord.Message):
             message.channel, discord.GroupChannel):
         return
 
-    now = datetime.utcnow()
-    if not bot.recent_tickets.get(str(message.author.id), now - tt) > now - tt:
+    now: datetime = datetime.utcnow()
+    if not bot.recent_tickets.get(str(message.author.id), now - bot.tt) > now - bot.tt:
         # Check if the ticket to this user was last granted 2 minutes ago
         await increment_ticket(bot, message.author.id)
         bot.recent_tickets[str(message.author.id)] = now
@@ -227,12 +239,12 @@ async def on_message(message: discord.Message):
 @bot.event
 async def on_guild_join(g: discord.Guild):
     await bot.config.update(str(g.id), "guild", "join")
-    success = False
-    i = 0
+    success: bool = False
+    i: int = 0
     # Try to send a thank you message to the right channel in the server
     while not success:
         try:
-            p = await bot.config.get_prefix(g.id)
+            p: str = await bot.config.get_prefix(g.id)
             await g.channels[i].send(
                 f"Hello! Thanks for inviting me to your server. To set a custom prefix, use `{p}prefix"
                 f" <prefix>`. For more help, use `{p}help`.")
@@ -261,25 +273,26 @@ async def on_guild_remove(g: discord.Guild):
         await bot.dbl_client.post_guild_count()
 
 
-async def send_cmd_help(ctx) -> discord.Embed:
-    cmd = ctx.command
-    p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
-    pre = await bot.config.get_prefix(ctx.guild.id)
-    em = discord.Embed(title=f'Usage: `{pre + p + cmd.name} {cmd.signature}`', color=utils.random_color())
+async def send_cmd_help(ctx: commands.Context) -> discord.Embed:
+    cmd: commands.Command = ctx.command
+    p: str = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
+    pre: str = await bot.config.get_prefix(ctx.guild.id)
+    em: discord.Embed = discord.Embed(title=f'Usage: `{pre + p + cmd.name} {cmd.signature}`',
+                                      color=utils.random_color())
     em.description = cmd.help
     return em
 
 
-def format_cog_help(cog, em: discord.Embed) -> discord.Embed:
+def format_cog_help(cog_name: str, em: discord.Embed) -> discord.Embed:
     """Format help for a cog"""
-    cog_commands = bot.get_cog(cog).get_commands()
-    commands_list = ''
+    cog_commands: List[commands.Command] = bot.get_cog(cog_name).get_commands()
+    commands_list: str = ''
     for comm in cog_commands:
         if not comm.hidden:
             commands_list += f'**{comm.name}** - *{comm.short_doc}* \n'
 
     em.add_field(
-        name=f"{cog}",
+        name=f"{cog_name}",
         value=commands_list,
         inline=False
     ).add_field(
@@ -289,11 +302,12 @@ def format_cog_help(cog, em: discord.Embed) -> discord.Embed:
     return em
 
 
-async def format_command_help(ctx, cmd, em: discord.Embed) -> discord.Embed:
+async def format_command_help(ctx: commands.Context, cmd: commands.Command, em: discord.Embed) -> discord.Embed:
     """Format help for a command"""
 
-    pre = await bot.config.get_prefix(ctx.guild.id)
-    p = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
+    pre: str = await bot.config.get_prefix(ctx.guild.id)
+    p: str = str(cmd.root_parent) + " " if cmd.root_parent is not None else ""
+    c: str
 
     if getattr(cmd, 'invoke_without_command', False):
         c = f'`{pre + p + cmd.name} {cmd.signature} <sub-command> [args]`'
@@ -306,22 +320,22 @@ async def format_command_help(ctx, cmd, em: discord.Embed) -> discord.Embed:
     return em
 
 
-async def format_bot_help(ctx) -> discord.Embed:
-    signatures = []
-    fmt = ''
-    bot_commands = []
-    pre = await bot.config.get_prefix(ctx.guild.id)
+async def format_bot_help(ctx: commands.Context) -> discord.Embed:
+    signatures: List[int] = []
+    fmt: str = ''
+    bot_commands: List[commands.Command] = []
+    pre: str = await bot.config.get_prefix(ctx.guild.id)
     for cmd in bot.commands:
         if not cmd.hidden:
             if not cmd.cog:
                 bot_commands.append(cmd)
                 signatures.append(len(cmd.name) + len(pre))
-    max_length = max(signatures)
-    abc = sorted(bot_commands, key=lambda x: x.name)
+    max_length: int = max(signatures)
+    abc: List[commands.Command] = sorted(bot_commands, key=lambda x: x.name)
     for c in abc:
         fmt += f'`{pre + c.name:<{max_length}} '
         fmt += f'{c.short_doc:<{max_length}}`\n'
-    em = discord.Embed(title='Bot', color=utils.random_color())
+    em: discord.Embed = discord.Embed(title='Bot', color=utils.random_color())
     em.set_thumbnail(url=bot.user.avatar_url)
     em.description = '*Commands for the main bot.*'
     em.add_field(name='Commands', value=fmt)
@@ -330,15 +344,15 @@ async def format_bot_help(ctx) -> discord.Embed:
 
 
 @bot.command(name="help", aliases=['commands', 'command'], usage='cog')
-async def _help(ctx, *, command: str = None):
+async def _help(ctx: commands.Context, *, command: str = None):
     """Shows this message"""
 
-    pages = []
-    pre = await bot.config.get_prefix(ctx.guild.id)
+    pages: List[discord.Embed] = []
+    pre: str = await bot.config.get_prefix(ctx.guild.id)
 
     if command is not None:
-        cog = bot.get_cog(command.replace(' ', '_').title())
-        cmd = bot.get_command(command)
+        cog: Optional[commands.Cog] = bot.get_cog(command.replace(' ', '_').title())
+        cmd: Optional[commands.Command] = bot.get_command(command)
         em = discord.Embed(
             title=f'`{command}` Help',
             color=utils.random_color()
@@ -354,31 +368,36 @@ async def _help(ctx, *, command: str = None):
         elif cmd is not None:
             em = await format_command_help(ctx, cmd, em)
         else:
-            return await ctx.send('No commands or cog found which satisfies the name you gave.')
+            await ctx.send('No commands or cog found which satisfies the name you gave.')
+            return
 
-        return await ctx.send(embed=em)
+        await ctx.send(embed=em)
+        return
 
     pages.append(await format_bot_help(ctx))
 
-    for cog in bot.cogs:
+    cog_n: str
+    em: discord.Embed
+    for cog_n in bot.cogs:
         em = discord.Embed(
             title='Help',
             color=utils.random_color()
         )
         em.set_thumbnail(url=bot.user.avatar_url)
-        em = format_cog_help(cog, em)
-        if not getattr(bot.cogs[cog], "hidden", False):
+        em = format_cog_help(cog_n, em)
+        if not getattr(bot.cogs[cog_n], "hidden", False):
             pages.append(em)
 
-    p_session = PaginatorSession(ctx, footer=f'Type `{pre}help <command>` for more info on a command.',
-                                 pages=pages)
+    p_session: PaginatorSession = PaginatorSession(ctx,
+                                                   footer=f'Type `{pre}help <command>` for more info on a command.',
+                                                   pages=pages)
     await p_session.run()
 
     return
 
 
 @bot.command()
-async def ping(ctx):
+async def ping(ctx: commands.Context):
     """Pong! Get the bot's response time"""
     em = discord.Embed(color=discord.Color.green())
     em.title = "Pong!"
@@ -387,12 +406,12 @@ async def ping(ctx):
 
 
 @bot.command(name='bot')
-async def _bot(ctx):
+async def _bot(ctx: commands.Context):
     """Shows info about bot"""
-    em = discord.Embed(color=discord.Color.green())
+    em: discord.Embed = discord.Embed(color=discord.Color.green())
     em.title = 'Bot Info'
     em.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
-    p = bot.announcement if bot.announcement is not None else bot.description
+    p: str = bot.announcement if bot.announcement is not None else bot.description
     em.description = p + f'\n[Support Server]({bot.creator.support_server})'
     em.add_field(name="Servers", value=str(len(bot.guilds)))
     em.add_field(name="Online Users",
@@ -416,9 +435,10 @@ async def _bot(ctx):
 
 
 @bot.command()
-async def creator(ctx):
+async def creator(ctx: commands.Context):
     """Shows bot's creator"""
-    em = discord.Embed(title="BombSquad Bot creator", description=f"<@{bot.creator.discord}> is my creator.")
+    em: discord.Embed = discord.Embed(title="BombSquad Bot creator",
+                                      description=f"<@{bot.creator.discord}> is my creator.")
     em.set_author(name=bot.creator.name, url=bot.creator.url, icon_url=bot.creator.icon)
     em.add_field(name="Support the creator", value=f"[Patreon Page]({bot.creator.patreon})")
     em.set_footer(text="BombSquad Bot | Powered by discord.py")
@@ -426,12 +446,12 @@ async def creator(ctx):
 
 
 @bot.command()
-async def invite(ctx):
+async def invite(ctx: commands.Context):
     """Shows invite link of the bot"""
-    em = discord.Embed(color=utils.random_color())
+    em: discord.Embed = discord.Embed(color=utils.random_color())
     em.title = 'Bot Invite Link'
     em.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
-    p = bot.announcement if bot.announcement is not None else bot.description
+    p: str = bot.announcement if bot.announcement is not None else bot.description
     em.description = p + f'\n[Support Server]({bot.creator.support_server})'
     em.add_field(name="Invite the bot",
                  value=f"[Invite this bot to a server](https://discordapp.com/oauth2/authorize?client_id={bot.user.id}"
@@ -442,12 +462,12 @@ async def invite(ctx):
 
 
 @bot.command()
-async def support(ctx):
+async def support(ctx: commands.Context):
     """Get the support server's invite link."""
-    em = discord.Embed(color=utils.random_color())
+    em: discord.Embed = discord.Embed(color=utils.random_color())
     em.title = 'Our support server'
     em.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
-    p = bot.announcement if bot.announcement is not None else bot.description
+    p: str = bot.announcement if bot.announcement is not None else bot.description
     em.description = p + f'\n[Support Server]({bot.creator.support_server})'
     em.add_field(name="Support Server",
                  value=f"[Click Here]({bot.creator.support_server})")
@@ -460,12 +480,12 @@ async def support(ctx):
 
 
 @bot.command(aliases=['upvote'])
-async def vote(ctx):
+async def vote(ctx: commands.Context):
     """Shows vote link of the bot"""
-    em = discord.Embed(color=utils.random_color())
+    em: discord.Embed = discord.Embed(color=utils.random_color())
     em.title = 'Bot Voting Link'
     em.set_author(name=ctx.author.name, icon_url=ctx.author.avatar_url)
-    p = bot.announcement if bot.announcement is not None else bot.description
+    p: str = bot.announcement if bot.announcement is not None else bot.description
     em.description = p + f'\n[Support Server]({bot.creator.support_server})'
     em.add_field(name="Upvote on Discord Bots List",
                  value=f"[Upvote this bot](https://top.gg/bot/{bot.user.id})")
