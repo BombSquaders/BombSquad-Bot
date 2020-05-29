@@ -20,7 +20,7 @@ extensions: List[str] = [x.replace('.py', '') for x in os.listdir('cogs') if x.e
 
 
 # A function to get the prefix of the bot for a message
-async def prefix(d_client, message):
+async def prefix(d_client, message) -> str:
     """Get prefix"""
     # This line lets the users either use mention or characters for command prefix
     return commands.when_mentioned_or(await d_client.config.get_prefix(message.guild.id))(d_client, message)
@@ -30,7 +30,7 @@ async def prefix(d_client, message):
 
 # A Thread to get the commands input from the terminal after running the bot
 class RunInput(Thread):
-    def run(self):
+    def run(self) -> None:
         global inpt
         que: bool = False
         cmd: str = ""
@@ -67,12 +67,12 @@ class BotCreator(object):
     github = "https://www.github.com/BombSquaders/"  # The Github account url
     bot_github = f"{github}BombSquad-Bot/"  # The repository name of this bot's source code on Github
     name = f"[BombSquaders organization]({github})"  # The creator name here
-    url = "https://www.thegr8.tk/"  # The website or web-page of the creator here
+    url = "https://www.rahulraman.me/"  # The website or web-page of the creator here
     icon = "https://avatars1.githubusercontent.com/u/62781896"  # The icon url
-    patreon = "https://patreon.com/rahulraman108"  # The patreon page of the creator
+    patreon = "https://patreon.com/rahulraman0108"  # The patreon page of the creator
     discord = 473128022711730177  # Discord id snowflake of the creator's discord account
-    support_server = "https://discord.gg/BCZvf3W"  # The bot's support discord server invite
-    bot_invite_perms = "36981824"  # Bot invite required permissions, use 1077406934 if you want to use the mods cog
+    support_server = "https://discord.gg/dNX2P2k"  # The bot's support discord server invite
+    bot_invite_perms = "36981824"
 
 
 # Our bot instance, use commands.AutoShardedBot if the bot passes 1000 server
@@ -108,7 +108,7 @@ bot: MyBot = MyBot(command_prefix=prefix,
 
 
 @bot.event
-async def on_connect():
+async def on_connect() -> None:
     global t, inpt
     inpt = False  # Just for surety to that the thread is not running
     await asyncio.sleep(0.005)
@@ -116,7 +116,7 @@ async def on_connect():
     t = RunInput()
     t.daemon = True
 
-    ex = [x for x in bot.extensions]  # Make a copy of list so it don't change while unloading
+    ex: List[str] = [x for x in bot.extensions]  # Make a copy of list so it don't change while unloading
     for extension in ex:  # Unload any loaded extension
         bot.unload_extension(extension)
 
@@ -137,7 +137,7 @@ async def on_connect():
 
 
 @bot.event
-async def on_disconnect():
+async def on_disconnect() -> None:
     global inpt
     inpt = False  # Stop reading input from terminal
 
@@ -147,7 +147,7 @@ async def on_disconnect():
 
 
 @bot.event
-async def on_ready():
+async def on_ready() -> None:
     global inpt, t
 
     await bot.change_presence(status=discord.Status.offline)  # Change to offline when loading
@@ -175,15 +175,21 @@ async def on_ready():
 
 
 @bot.event
-async def on_dbl_vote(data: Dict[str, Any]):
+async def on_dbl_vote(data: Dict[str, Any]) -> None:
     uid = data["user"]
-    print("Vote received")
+    print("DBL vote received")
     await increment_ticket(bot, uid)
     bot.dbl_user_votes[str(uid)] = {"voted": True, "cache_time": datetime.utcnow()}
 
 
 @bot.event
-async def on_command_error(ctx: commands.Context, error: Exception):
+async def on_dbl_test(data: Any) -> None:
+    print("DBL test vote received")
+    print(data)
+
+
+@bot.event
+async def on_command_error(ctx: commands.Context, error: Exception) -> None:
     # Errors for which the user needs help
     send_help: tuple = (
         commands.MissingRequiredArgument, commands.BadArgument, commands.TooManyArguments, commands.UserInputError)
@@ -224,7 +230,7 @@ async def on_command_error(ctx: commands.Context, error: Exception):
 
 
 @bot.event
-async def on_message(message: discord.Message):
+async def on_message(message: discord.Message) -> None:
     if not bot.is_ready() or message.author.bot or isinstance(message.channel, discord.DMChannel) or isinstance(
             message.channel, discord.GroupChannel):
         return
@@ -239,7 +245,7 @@ async def on_message(message: discord.Message):
 
 
 @bot.event
-async def on_guild_join(g: discord.Guild):
+async def on_guild_join(g: discord.Guild) -> None:
     await bot.config.update(str(g.id), "guild", "join")
     success: bool = False
     i: int = 0
@@ -266,7 +272,7 @@ async def on_guild_join(g: discord.Guild):
 
 
 @bot.event
-async def on_guild_remove(g: discord.Guild):
+async def on_guild_remove(g: discord.Guild) -> None:
     await bot.config.update(str(g.id), "guild", "remove")
     await bot.change_presence(activity=discord.Game(f"in {len(bot.guilds)} servers | {bot.default_prefix}help"),
                               afk=True)
@@ -346,7 +352,7 @@ async def format_bot_help(ctx: commands.Context) -> discord.Embed:
 
 
 @bot.command(name="help", aliases=['commands', 'command'], usage='cog')
-async def _help(ctx: commands.Context, *, command: str = None):
+async def _help(ctx: commands.Context, *, command: str = None) -> None:
     """Shows this message"""
 
     pages: List[discord.Embed] = []
@@ -399,7 +405,7 @@ async def _help(ctx: commands.Context, *, command: str = None):
 
 
 @bot.command()
-async def ping(ctx: commands.Context):
+async def ping(ctx: commands.Context) -> None:
     """Pong! Get the bot's response time"""
     em = discord.Embed(color=discord.Color.green())
     em.title = "Pong!"
@@ -408,7 +414,7 @@ async def ping(ctx: commands.Context):
 
 
 @bot.command(name='bot')
-async def _bot(ctx: commands.Context):
+async def _bot(ctx: commands.Context) -> None:
     """Shows info about bot"""
     em: discord.Embed = discord.Embed(color=discord.Color.green())
     em.title = 'Bot Info'
@@ -437,7 +443,7 @@ async def _bot(ctx: commands.Context):
 
 
 @bot.command()
-async def creator(ctx: commands.Context):
+async def creator(ctx: commands.Context) -> None:
     """Shows bot's creator"""
     em: discord.Embed = discord.Embed(title="BombSquad Bot creator",
                                       description=f"I am created by the {bot.creator.name}.")
@@ -448,7 +454,7 @@ async def creator(ctx: commands.Context):
 
 
 @bot.command()
-async def invite(ctx: commands.Context):
+async def invite(ctx: commands.Context) -> None:
     """Shows invite link of the bot"""
     em: discord.Embed = discord.Embed(color=utils.random_color())
     em.title = 'Bot Invite Link'
@@ -464,7 +470,7 @@ async def invite(ctx: commands.Context):
 
 
 @bot.command()
-async def support(ctx: commands.Context):
+async def support(ctx: commands.Context) -> None:
     """Get the support server's invite link."""
     em: discord.Embed = discord.Embed(color=utils.random_color())
     em.title = 'Our support server'
@@ -482,7 +488,7 @@ async def support(ctx: commands.Context):
 
 
 @bot.command(aliases=['upvote'])
-async def vote(ctx: commands.Context):
+async def vote(ctx: commands.Context) -> None:
     """Shows vote link of the bot"""
     em: discord.Embed = discord.Embed(color=utils.random_color())
     em.title = 'Bot Voting Link'
