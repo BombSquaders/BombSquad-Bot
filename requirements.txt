@@ -4,5 +4,5 @@ asyncio~=3.4.3
 pytz~=2019.3
 Pillow~=7.1.1
 wikipedia~=1.4.0
-git+https://github.com/dongweiming/aiomysql@python38
+git+https://github.com/aio-libs/aiomysql@master
 git+https://github.com/DiscordBotList/DBL-Python-Library@master
