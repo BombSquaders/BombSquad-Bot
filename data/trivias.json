@@ -36,8 +36,8 @@
   },
   "7": {
     "question": "A BombSquad game's dedicated server can be configured to allow how many players?",
-    "options": ["6", "9", "50", "unlimited"],
-    "answers": ["4", "unlimited"]
+    "options": ["6", "9", "50", "99"],
+    "answers": ["4", "99"]
   },
   "8": {
     "question": "Which of the following windows is used for playing online?",
